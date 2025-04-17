@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>收益报表 - 分布式储能系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* 自定义滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(241, 245, 249, 0.6);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.5);
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.8);
+        }
+        
+        /* Firefox滚动条样式 */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(148, 163, 184, 0.5) rgba(241, 245, 249, 0.6);
+        }
+        
+        .glass-card {
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        
+        .sidebar-item:hover:not(.active) {
+            background-color: rgba(243, 244, 246, 0.8);
+        }
+        
+        .sidebar-item.active {
+            background-color: rgba(219, 234, 254, 0.5);
+            color: #3b82f6;
+            font-weight: 500;
+        }
+        
+        .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .submenu.open {
+            max-height: 200px;
+        }
+        
+        .nav-item {
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        
+        .nav-item.active {
+            color: #3b82f6;
+        }
+        
+        .card-title {
+            font-size: 0.75rem; /* 12px */
+            font-weight: 600;
+            color: #1f2937; /* 更深的灰色 */
+            text-transform: uppercase; /* 大写字母 */
+            letter-spacing: 0.05em; /* 增加字母间距 */
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(229, 231, 235, 0.5); /* 添加底部边框 */
+            display: flex;
+            align-items: center;
+        }
+        
+        .card-title i {
+            margin-right: 0.375rem;
+            color: #3b82f6; /* 蓝色图标 */
+            font-size: 0.875rem; /* 14px */
+        }
+        
+        .info-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background-color: rgba(219, 234, 254, 0.5);
+            color: #3b82f6;
+        }
+        
+        .income-card {
+            transition: all 0.2s ease;
+            border-top: 3px solid #3b82f6;
+        }
+        
+        .income-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .trend-up {
+            color: #10b981;
+            font-weight: 500;
+        }
+        
+        .trend-down {
+            color: #ef4444;
+            font-weight: 500;
+        }
+        
+        .tab-button {
+            transition: all 0.2s ease;
+        }
+        
+        .tab-button.active {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            font-weight: 500;
+        }
+        
+        .calendar-day {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .calendar-day:hover {
+            background-color: rgba(243, 244, 246, 0.8);
+        }
+        
+        .calendar-day.high {
+            background-color: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #065f46;
+            font-weight: 500;
+        }
+        
+        .calendar-day.medium {
+            background-color: rgba(245, 158, 11, 0.05);
+            border: 1px solid rgba(245, 158, 11, 0.1);
+            color: #92400e;
+        }
+        
+        .calendar-day.low {
+            background-color: rgba(239, 68, 68, 0.05);
+            border: 1px solid rgba(239, 68, 68, 0.1);
+            color: #b91c1c;
+        }
+        
+        .table-row {
+            transition: all 0.2s ease;
+        }
+        
+        .table-row:hover {
+            background-color: rgba(243, 244, 246, 0.5);
+        }
+        
+        .dashboard-content-scrollable {
+            overflow-y: auto;
+            height: calc(100vh - 64px);
+            padding-bottom: 20px;
+        }
+        
+        /* 确保主内容区域可滚动 */
+        main {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .ml-60 {
+            margin-left: 15rem;
+            height: calc(100vh - 64px);
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 顶部导航栏 -->
+    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-10 h-16">
+        <div class="flex items-center justify-between px-6 h-full">
+            <div class="flex items-center">
+                <div class="text-xl font-semibold text-gray-800">分布式储能系统</div>
+                <nav class="ml-10">
+                    <ul class="flex space-x-8">
+                        <li class="nav-item">
+                            <a href="#" class="text-gray-600 hover:text-gray-900 text-sm">驾驶舱</a>
+                        </li>
+                        <li class="nav-item active">
+                            <a href="#" class="text-sm">站点列表</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="text-gray-600 hover:text-gray-900 text-sm">告警中心</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="text-gray-600 hover:text-gray-900 text-sm">管理</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button class="text-gray-600 hover:text-gray-900">
+                    <i class="fas fa-bell"></i>
+                </button>
+                <button class="text-gray-600 hover:text-gray-900">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="flex pt-16">
+        <!-- 左侧导航栏 -->
+        <aside class="w-60 bg-white shadow-sm fixed left-0 top-16 bottom-0 overflow-y-auto">
+            <div class="p-4">
+                <div class="text-sm font-medium text-gray-500 mb-2">北京朝阳储能电站</div>
+                <nav>
+                    <ul class="space-y-1">
+                        <li>
+                            <a href="#" class="sidebar-item flex items-center px-3 py-2 rounded-md text-sm">
+                                <i class="fas fa-home w-5"></i>
+                                <span>站点概况</span>
+                            </a>
+                        </li>
+                        <li>
+                            <div id="battery-management" class="sidebar-item flex items-center justify-between px-3 py-2 rounded-md text-sm cursor-pointer">
+                                <div class="flex items-center">
+                                    <i class="fas fa-battery-three-quarters w-5"></i>
+                                    <span>电池管理</span>
+                                </div>
+                                <i id="battery-chevron" class="fas fa-chevron-down transform text-xs transition-transform"></i>
+                            </div>
+                            <ul id="battery-submenu" class="submenu pl-8 space-y-1">
+                                <li>
+                                    <a href="#" class="sidebar-item flex items-center px-3 py-2 rounded-md text-sm">
+                                        <span>PCS</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="#" class="sidebar-item flex items-center px-3 py-2 rounded-md text-sm">
+                                        <span>电池包</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li>
+                            <a href="#" class="sidebar-item active flex items-center px-3 py-2 rounded-md text-sm">
+                                <i class="fas fa-chart-line w-5"></i>
+                                <span>收益报表</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="sidebar-item flex items-center px-3 py-2 rounded-md text-sm">
+                                <i class="fas fa-calendar w-5"></i>
+                                <span>业务调度日历</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="sidebar-item flex items-center px-3 py-2 rounded-md text-sm">
+                                <i class="fas fa-bolt w-5"></i>
+                                <span>充放电策略</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="sidebar-item flex items-center px-3 py-2 rounded-md text-sm">
+                                <i class="fas fa-exclamation-triangle w-5"></i>
+                                <span>站点报警</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="sidebar-item flex items-center px-3 py-2 rounded-md text-sm">
+                                <i class="fas fa-file-alt w-5"></i>
+                                <span>分析报表</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="sidebar-item flex items-center px-3 py-2 rounded-md text-sm">
+                                <i class="fas fa-desktop w-5"></i>
+                                <span>数据监控</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- 右侧内容区 -->
+        <div class="ml-60 flex-1 p-6 dashboard-content dashboard-content-scrollable">
+            <!-- 页面标题 -->
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-xl font-semibold text-gray-800">收益报表</h1>
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-500">最后更新: 2023-08-15 14:32:45</span>
+                    <button class="p-1 rounded-full hover:bg-gray-200 transition-colors" id="refreshData">
+                        <i class="fas fa-sync-alt text-gray-600 text-sm"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 收益概览 -->
+            <div class="glass-card p-4 mb-6">
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="flex items-center">
+                        <div class="info-icon mr-3">
+                            <i class="fas fa-yen-sign"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 mb-1">今日收益</div>
+                            <div class="text-xl font-semibold">¥2,586.45</div>
+                            <div class="text-xs text-green-500 mt-1">
+                                <i class="fas fa-arrow-up mr-1"></i>12.5%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="info-icon mr-3">
+                            <i class="fas fa-calendar-week"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 mb-1">本月累计</div>
+                            <div class="text-xl font-semibold">¥77,595.00</div>
+                            <div class="text-xs text-green-500 mt-1">
+                                <i class="fas fa-arrow-up mr-1"></i>8.3%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="info-icon mr-3">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 mb-1">年度累计</div>
+                            <div class="text-xl font-semibold">¥598,432.50</div>
+                            <div class="text-xs text-green-500 mt-1">
+                                <i class="fas fa-arrow-up mr-1"></i>15.2%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="info-icon mr-3">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 mb-1">总累计收益</div>
+                            <div class="text-xl font-semibold">¥1,245,680.75</div>
+                            <div class="text-xs text-gray-500 mt-1">自投运以来</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 时间筛选器 -->
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex space-x-2">
+                    <button class="tab-button active px-4 py-2 text-xs rounded-md bg-blue-50 text-blue-500" data-range="day">日</button>
+                    <button class="tab-button px-4 py-2 text-xs rounded-md bg-gray-50 text-gray-500 hover:bg-gray-100" data-range="week">周</button>
+                    <button class="tab-button px-4 py-2 text-xs rounded-md bg-gray-50 text-gray-500 hover:bg-gray-100" data-range="month">月</button>
+                    <button class="tab-button px-4 py-2 text-xs rounded-md bg-gray-50 text-gray-500 hover:bg-gray-100" data-range="year">年</button>
+                    <button class="tab-button px-4 py-2 text-xs rounded-md bg-gray-50 text-gray-500 hover:bg-gray-100" data-range="custom">自定义</button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="text-xs text-gray-500">2023-08-09 至 2023-08-15</div>
+                    <button class="px-3 py-1.5 text-xs rounded-md bg-gray-50 text-gray-500 hover:bg-gray-100">
+                        <i class="fas fa-calendar-alt mr-1"></i>选择日期
+                    </button>
+                    <button class="px-3 py-1.5 text-xs rounded-md bg-blue-50 text-blue-500 hover:bg-blue-100">
+                        <i class="fas fa-sync-alt mr-1"></i>刷新数据
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 重新排版的内容区 - 两列布局 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- 收益趋势图 - 占据左侧 -->
+                <div class="glass-card p-4">
+                    <h2 class="card-title">
+                        <i class="fas fa-chart-line"></i>收益趋势
+                    </h2>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- 业务类型收益对比图 - 占据右侧 -->
+                <div class="glass-card p-4">
+                    <h2 class="card-title">
+                        <i class="fas fa-chart-bar"></i>业务类型收益对比
+                    </h2>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="businessComparisonChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 收益日历热力图 -->
+            <div class="glass-card p-4 mb-6">
+                <h2 class="card-title mb-3">
+                    <i class="fas fa-calendar-day mr-2"></i>收益日历热力图
+                </h2>
+                
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-xs font-medium">2023年8月</div>
+                    <div class="flex items-center space-x-1">
+                        <button class="p-1 rounded hover:bg-gray-100 text-gray-500">
+                            <i class="fas fa-chevron-left text-xs"></i>
+                        </button>
+                        <button class="p-1 rounded hover:bg-gray-100 text-gray-500">
+                            <i class="fas fa-chevron-right text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 星期标题行 -->
+                <div class="grid grid-cols-7 mb-1">
+                    <div class="text-xs text-center text-gray-500">日</div>
+                    <div class="text-xs text-center text-gray-500">一</div>
+                    <div class="text-xs text-center text-gray-500">二</div>
+                    <div class="text-xs text-center text-gray-500">三</div>
+                    <div class="text-xs text-center text-gray-500">四</div>
+                    <div class="text-xs text-center text-gray-500">五</div>
+                    <div class="text-xs text-center text-gray-500">六</div>
+                </div>
+                
+                <!-- 日历网格 - 增加高度 -->
+                <div class="grid grid-cols-7 gap-1">
+                    <!-- 第一行 (7月30日-8月5日) -->
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs text-gray-400 px-1 py-0.5 text-right">30</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs text-gray-400 px-1 py-0.5 text-right">31</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">1</div>
+                        <div class="flex-grow flex items-center justify-center bg-green-100 text-xs">¥1,845</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">2</div>
+                        <div class="flex-grow flex items-center justify-center bg-green-100 text-xs">¥1,932</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">3</div>
+                        <div class="flex-grow flex items-center justify-center bg-green-100 text-xs">¥1,890</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">4</div>
+                        <div class="flex-grow flex items-center justify-center bg-green-200 text-xs">¥2,012</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">5</div>
+                        <div class="flex-grow flex items-center justify-center bg-green-100 text-xs">¥1,954</div>
+                    </div>
+                    
+                    <!-- 第二行 (8月6日-12日) -->
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">6</div>
+                        <div class="flex-grow flex items-center justify-center bg-green-100 text-xs">¥1,876</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">7</div>
+                        <div class="flex-grow flex items-center justify-center bg-green-100 text-xs">¥1,923</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">8</div>
+                        <div class="flex-grow flex items-center justify-center bg-green-100 text-xs">¥1,945</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">9</div>
+                        <div class="flex-grow flex items-center justify-center bg-green-100 text-xs">¥1,976</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">10</div>
+                        <div class="flex-grow flex items-center justify-center bg-green-100 text-xs">¥1,941</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">11</div>
+                        <div class="flex-grow flex items-center justify-center bg-green-200 text-xs">¥2,080</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">12</div>
+                        <div class="flex-grow flex items-center justify-center bg-green-200 text-xs">¥2,201</div>
+                    </div>
+                    
+                    <!-- 第三行 (8月13日-19日) -->
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">13</div>
+                        <div class="flex-grow flex items-center justify-center bg-green-200 text-xs">¥2,124</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">14</div>
+                        <div class="flex-grow flex items-center justify-center bg-green-300 text-xs">¥2,298</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right font-medium">15</div>
+                        <div class="flex-grow flex items-center justify-center bg-green-500 text-white text-xs font-medium">¥2,586</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">16</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">17</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">18</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">19</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    
+                    <!-- 第四行 (8月20日-26日) -->
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">20</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">21</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">22</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">23</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">24</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">25</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">26</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    
+                    <!-- 第五行 (8月27日-9月2日) -->
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">27</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">28</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">29</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">30</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs px-1 py-0.5 text-right">31</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs text-gray-400 px-1 py-0.5 text-right">1</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                    <div class="h-12 rounded border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="text-xs text-gray-400 px-1 py-0.5 text-right">2</div>
+                        <div class="flex-grow flex items-center justify-center text-gray-400 text-xs">-</div>
+                    </div>
+                </div>
+                
+                <!-- 图例 -->
+                <div class="flex items-center justify-center mt-3 space-x-4 text-xs text-gray-600">
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 bg-green-100 rounded mr-1"></div>
+                        <span>低收益 (≤¥2,000)</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 bg-green-200 rounded mr-1"></div>
+                        <span>中等收益 (¥2,000-¥2,300)</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 bg-green-500 rounded mr-1"></div>
+                        <span>高收益 (≥¥2,300)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 收益详细数据表格 - 占据整行 -->
+            <div class="glass-card p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="card-title">
+                        <i class="fas fa-table"></i>收益详细数据
+                    </h2>
+                    <div class="flex items-center space-x-2">
+                        <button class="text-xs px-3 py-1.5 rounded bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors" id="exportExcel">
+                            <i class="fas fa-file-excel mr-1"></i>导出Excel
+                        </button>
+                        <button class="text-xs px-3 py-1.5 rounded bg-gray-50 text-gray-500 hover:bg-gray-100 transition-colors" id="exportPDF">
+                            <i class="fas fa-file-pdf mr-1"></i>导出PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="text-left text-xs text-gray-500 border-b border-gray-200">
+                                <th class="pb-2">日期</th>
+                                <th class="pb-2">总收益 (元)</th>
+                                <th class="pb-2">峰谷价差 (元)</th>
+                                <th class="pb-2">调频服务 (元)</th>
+                                <th class="pb-2">需求响应 (元)</th>
+                                <th class="pb-2">环比变化</th>
+                            </tr>
+                        </thead>
+                        <tbody id="incomeTableBody">
+                            <tr class="table-row text-sm border-b border-gray-100">
+                                <td class="py-3">2023-08-15</td>
+                                <td class="py-3 font-medium">2,586.45</td>
+                                <td class="py-3">1,293.25</td>
+                                <td class="py-3">776.00</td>
+                                <td class="py-3">517.20</td>
+                                <td class="py-3 text-green-500">+12.5%</td>
+                            </tr>
+                            <tr class="table-row text-sm border-b border-gray-100">
+                                <td class="py-3">2023-08-14</td>
+                                <td class="py-3 font-medium">2,298.60</td>
+                                <td class="py-3">1,149.30</td>
+                                <td class="py-3">689.58</td>
+                                <td class="py-3">459.72</td>
+                                <td class="py-3 text-green-500">+8.2%</td>
+                            </tr>
+                            <tr class="table-row text-sm border-b border-gray-100">
+                                <td class="py-3">2023-08-13</td>
+                                <td class="py-3 font-medium">2,124.40</td>
+                                <td class="py-3">1,062.20</td>
+                                <td class="py-3">637.32</td>
+                                <td class="py-3">424.88</td>
+                                <td class="py-3 text-red-500">-3.5%</td>
+                            </tr>
+                            <tr class="table-row text-sm border-b border-gray-100">
+                                <td class="py-3">2023-08-12</td>
+                                <td class="py-3 font-medium">2,201.45</td>
+                                <td class="py-3">1,100.73</td>
+                                <td class="py-3">660.44</td>
+                                <td class="py-3">440.29</td>
+                                <td class="py-3 text-green-500">+5.8%</td>
+                            </tr>
+                            <tr class="table-row text-sm border-b border-gray-100">
+                                <td class="py-3">2023-08-11</td>
+                                <td class="py-3 font-medium">2,080.76</td>
+                                <td class="py-3">1,040.38</td>
+                                <td class="py-3">624.23</td>
+                                <td class="py-3">416.15</td>
+                                <td class="py-3 text-green-500">+7.2%</td>
+                            </tr>
+                            <tr class="table-row text-sm border-b border-gray-100">
+                                <td class="py-3">2023-08-10</td>
+                                <td class="py-3 font-medium">1,941.01</td>
+                                <td class="py-3">970.51</td>
+                                <td class="py-3">582.30</td>
+                                <td class="py-3">388.20</td>
+                                <td class="py-3 text-red-500">-1.8%</td>
+                            </tr>
+                            <tr class="table-row text-sm">
+                                <td class="py-3">2023-08-09</td>
+                                <td class="py-3 font-medium">1,976.59</td>
+                                <td class="py-3">988.30</td>
+                                <td class="py-3">592.98</td>
+                                <td class="py-3">395.32</td>
+                                <td class="py-3 text-green-500">+4.3%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // 初始化图表
+        document.addEventListener('DOMContentLoaded', function() {
+            // 侧边栏子菜单切换
+            document.getElementById('battery-management').addEventListener('click', function() {
+                const submenu = document.getElementById('battery-submenu');
+                const chevron = document.getElementById('battery-chevron');
+                submenu.classList.toggle('open');
+                chevron.classList.toggle('rotate-180');
+            });
+            
+            // 收益趋势图
+            try {
+                const trendCtx = document.getElementById('trendChart').getContext('2d');
+                const trendChart = new Chart(trendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['08-09', '08-10', '08-11', '08-12', '08-13', '08-14', '08-15'],
+                        datasets: [{
+                            label: '日收益 (元)',
+                            data: [1976.59, 1941.01, 2080.76, 2201.45, 2124.40, 2298.60, 2586.45],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true,
+                            pointBackgroundColor: '#ffffff',
+                            pointBorderColor: '#3b82f6',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.y !== null) {
+                                            label += new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY' }).format(context.parsed.y);
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    font: {
+                                        size: 10
+                                    }
+                                }
+                            },
+                            y: {
+                                beginAtZero: false,
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)'
+                                },
+                                ticks: {
+                                    font: {
+                                        size: 10
+                                    },
+                                    callback: function(value) {
+                                        return '¥' + value.toLocaleString('zh-CN');
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log('收益趋势图已创建');
+            } catch (e) {
+                console.error('创建收益趋势图失败:', e);
+            }
+            
+            // 业务类型收益对比图
+            try {
+                const businessCtx = document.getElementById('businessComparisonChart').getContext('2d');
+                const businessChart = new Chart(businessCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['峰谷价差', '调频服务', '需求响应'],
+                        datasets: [
+                            {
+                                label: '本月',
+                                data: [38797.50, 23278.50, 15519.00],
+                                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                                borderColor: 'rgba(59, 130, 246, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: '上月',
+                                data: [35625.00, 21375.00, 14250.00],
+                                backgroundColor: 'rgba(209, 213, 219, 0.7)',
+                                borderColor: 'rgba(209, 213, 219, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    boxWidth: 12,
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.y !== null) {
+                                            label += new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY' }).format(context.parsed.y);
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    font: {
+                                        size: 10
+                                    }
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)'
+                                },
+                                ticks: {
+                                    font: {
+                                        size: 10
+                                    },
+                                    callback: function(value) {
+                                        return '¥' + value.toLocaleString('zh-CN');
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log('业务类型收益对比图已创建');
+            } catch (e) {
+                console.error('创建业务类型收益对比图失败:', e);
+            }
+            
+            // 时间筛选器功能
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    tabButtons.forEach(btn => btn.classList.remove('active', 'bg-blue-50', 'text-blue-500'));
+                    tabButtons.forEach(btn => btn.classList.add('bg-gray-50', 'text-gray-500'));
+                    this.classList.remove('bg-gray-50', 'text-gray-500');
+                    this.classList.add('active', 'bg-blue-50', 'text-blue-500');
+                    
+                    // 这里可以添加根据选择的时间范围更新图表数据的逻辑
+                    const timeRange = this.getAttribute('data-range');
+                    updateChartsByTimeRange(timeRange);
+                });
+            });
+            
+            // 导出功能
+            document.getElementById('exportExcel').addEventListener('click', function() {
+                alert('导出Excel功能已触发');
+                // 实际项目中可以调用后端API或使用前端库实现导出功能
+            });
+            
+            document.getElementById('exportPDF').addEventListener('click', function() {
+                alert('导出PDF功能已触发');
+                // 实际项目中可以调用后端API或使用前端库实现导出功能
+            });
+            
+            // 根据时间范围更新图表数据的函数
+            function updateChartsByTimeRange(range) {
+                console.log('更新时间范围为:', range);
+                // 这里可以根据选择的时间范围从API获取数据并更新图表
+            }
+            
+            // 响应式布局调整
+            function adjustLayout() {
+                const width = window.innerWidth;
+                const dashboardContent = document.querySelector('.dashboard-content');
+                
+                if (width < 1600) {
+                    dashboardContent.classList.add('dashboard-content-scrollable');
+                } else {
+                    dashboardContent.classList.remove('dashboard-content-scrollable');
+                }
+            }
+            
+            // 页面加载和窗口大小变化时调整布局
+            adjustLayout();
+            window.addEventListener('resize', adjustLayout);
+        });
+    </script>
+</body>
+</html>

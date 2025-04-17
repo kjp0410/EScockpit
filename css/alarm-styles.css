@@ -1,0 +1,226 @@
+/* 确保html和body可以滚动 */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: auto; /* 允许滚动 */
+}
+
+/* 主容器样式 */
+.main-container {
+    min-height: 100vh; /* 至少占满视口高度 */
+    position: relative;
+    overflow-y: auto; /* 允许垂直滚动 */
+}
+
+/* 内容区域调整 */
+.content-container {
+    position: absolute;
+    top: 64px; /* 顶部导航栏高度 */
+    left: 240px; /* 侧边栏宽度 */
+    right: 0;
+    bottom: 0;
+    overflow-y: auto;
+    padding: 20px;
+    background-color: #f9fafb;
+}
+
+/* 侧边栏调整 */
+aside {
+    position: fixed; /* 固定定位，不随页面滚动 */
+    top: 64px; /* 顶部导航栏高度 */
+    left: 0;
+    bottom: 0;
+    width: 240px;
+    overflow-y: auto; /* 允许垂直滚动 */
+    z-index: 10;
+}
+
+/* 顶部导航栏调整 */
+header {
+    position: fixed; /* 固定定位，不随页面滚动 */
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    z-index: 20;
+}
+
+/* 移动设备布局调整 */
+@media (max-width: 767px) {
+    .content-container {
+        left: 0; /* 在移动设备上隐藏侧边栏 */
+    }
+    aside {
+        display: none; /* 在移动设备上完全隐藏侧边栏 */
+    }
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.glass-card {
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    margin-bottom: 12px;
+}
+
+.sidebar-item {
+    transition: all 0.2s ease;
+}
+
+.sidebar-item:hover:not(.active) {
+    background-color: rgba(243, 244, 246, 0.8);
+}
+
+.sidebar-item.active {
+    background-color: rgba(219, 234, 254, 0.8);
+    color: #3b82f6;
+    border-left: 3px solid #3b82f6;
+}
+
+.chart-container {
+    position: relative;
+    height: 150px;
+    width: 100%;
+}
+
+.submenu {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.submenu.open {
+    max-height: 200px;
+}
+
+/* 卡片标题 */
+.card-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+    display: flex;
+    align-items: center;
+}
+
+/* 卡片标题图标 */
+.card-title i {
+    margin-right: 0.375rem;
+    color: #3b82f6;
+    font-size: 0.875rem;
+}
+
+/* 告警状态标签 */
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.status-critical {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: rgb(239, 68, 68);
+}
+
+.status-warning {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: rgb(245, 158, 11);
+}
+
+.status-normal {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: rgb(16, 185, 129);
+}
+
+.status-info {
+    background-color: rgba(107, 114, 128, 0.1);
+    color: rgb(107, 114, 128);
+}
+
+/* 表格样式 */
+.alarm-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.alarm-table th {
+    background-color: #f9fafb;
+    font-weight: 500;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.alarm-table td {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.alarm-table tr:hover {
+    background-color: #f9fafb;
+}
+
+/* 工具提示 */
+.tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip .tooltip-text {
+    visibility: hidden;
+    width: 120px;
+    background-color: rgba(55, 65, 81, 0.9);
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 0.75rem;
+    pointer-events: none;
+}
+
+.tooltip .tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: rgba(55, 65, 81, 0.9) transparent transparent transparent;
+}
+
+.tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Vue过渡动画 */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter, .fade-leave-to {
+  opacity: 0;
+}

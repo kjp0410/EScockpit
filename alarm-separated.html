@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>告警中心 - 分布式储能系统</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome 图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js 图表库 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <!-- 自定义样式 -->
+    <link rel="stylesheet" href="css/alarm-styles.css">
+</head>
+<body class="bg-gray-50">
+    <div id="app" class="main-container">
+        <!-- 顶部导航栏 -->
+        <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-20">
+            <div class="max-w-full mx-auto px-4">
+                <div class="flex items-center justify-between h-16">
+                    <!-- 左侧Logo和站点切换 -->
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <img class="h-8 w-auto" src="images/logo2.png" alt="Logo">
+                        </div>
+                        <div class="ml-4 flex items-center md:ml-6">
+                            <div class="text-sm font-medium text-gray-700">分布式储能管理系统</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 中间导航菜单 -->
+                    <div class="hidden md:flex md:items-center md:justify-center md:flex-1">
+                        <nav class="flex flex-wrap justify-center space-x-1 sm:space-x-2 md:space-x-4 lg:space-x-10">
+                            <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>驾驶舱</span>
+                            </a>
+                            <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>站点列表</span>
+                            </a>
+                            <a href="#" class="nav-item active text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-blue-500 text-blue-500">
+                                <span>告警中心</span>
+                            </a>
+                            <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>消息通知</span>
+                            </a>
+                        </nav>
+                    </div>
+                    
+                    <!-- 右侧图标区域 -->
+                    <div class="hidden md:flex items-center space-x-4 pr-2 sm:pr-4 md:pr-6 lg:pr-8">
+                        <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors">
+                            <i class="fas fa-cog text-lg"></i>
+                            <span class="sr-only">管理</span>
+                        </a>
+                        <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors">
+                            <i class="fas fa-user-circle text-lg"></i>
+                            <span class="sr-only">我的</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 左侧子导航菜单 -->
+        <aside class="fixed left-0 top-16 bottom-0 w-60 bg-white shadow-sm z-10 overflow-y-auto">
+            <nav class="py-4">
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-home text-lg w-6"></i>
+                    <span>站点概况</span>
+                </div>
+                
+                <div class="sidebar-parent">
+                    <div class="sidebar-item px-4 py-3 flex items-center justify-between cursor-pointer" @click="toggleSubmenu">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-battery-three-quarters text-lg w-6"></i>
+                            <span>电池管理</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-sm transition-transform" :class="{'rotate-180': submenuOpen}"></i>
+                    </div>
+                    <div class="submenu pl-10" :class="{'open': submenuOpen}">
+                        <div class="sidebar-item px-4 py-2 flex items-center space-x-3">
+                            <i class="fas fa-bolt text-sm w-5"></i>
+                            <span class="text-sm">PCS</span>
+                        </div>
+                        <div class="sidebar-item px-4 py-2 flex items-center space-x-3">
+                            <i class="fas fa-cubes text-sm w-5"></i>
+                            <span class="text-sm">电池包</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-chart-line text-lg w-6"></i>
+                    <span>收益报表</span>
+                </div>
+                   
+                <div class="sidebar-item active px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-exclamation-triangle text-lg w-6"></i>
+                    <span>站点报警</span>
+                </div>
+                
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-desktop text-lg w-6"></i>
+                    <span>工单管理</span>
+                </div>
+                
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-desktop text-lg w-6"></i>
+                    <span>数据监控</span>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- 主内容区域 -->
+        <div class="content-container">
+            <!-- 告警概览 -->
+            <div class="mb-6">
+                <h1 class="text-xl font-semibold text-gray-800 mb-4">告警中心</h1>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <!-- 总告警数 -->
+                    <div class="bg-white rounded-lg shadow-sm p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">总告警数</p>
+                                <p class="text-2xl font-semibold mt-1">{{ statistics.total }}</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                                <i class="fas fa-bell text-blue-500"></i>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-500">
+                            较上周 <span class="text-red-500">{{ statistics.totalTrend }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 严重告警 -->
+                    <div class="bg-white rounded-lg shadow-sm p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">严重告警</p>
+                                <p class="text-2xl font-semibold mt-1 text-red-500">{{ statistics.critical }}</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                                <i class="fas fa-exclamation-circle text-red-500"></i>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-500">
+                            较上周 <span class="text-red-500">{{ statistics.criticalTrend }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 警告 -->
+                    <div class="bg-white rounded-lg shadow-sm p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">警告</p>
+                                <p class="text-2xl font-semibold mt-1 text-yellow-500">{{ statistics.warning }}</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center">
+                                <i class="fas fa-exclamation-triangle text-yellow-500"></i>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-500">
+                            较上周 <span class="text-green-500">{{ statistics.warningTrend }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 已处理 -->
+                    <div class="bg-white rounded-lg shadow-sm p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">已处理</p>
+                                <p class="text-2xl font-semibold mt-1 text-green-500">{{ statistics.processed }}</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+                                <i class="fas fa-check-circle text-green-500"></i>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-500">
+                            较上周 <span class="text-green-500">{{ statistics.processedTrend }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 告警趋势图 -->
+                <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-base font-medium text-gray-800">告警趋势</h2>
+                        <div class="flex space-x-2">
+                            <button class="px-3 py-1 text-xs rounded" 
+                                    :class="timeRange === 'day' ? 'bg-blue-50 text-blue-500' : 'bg-gray-100 text-gray-500'"
+                                    @click="setTimeRange('day')">日</button>
+                            <button class="px-3 py-1 text-xs rounded" 
+                                    :class="timeRange === 'week' ? 'bg-blue-50 text-blue-500' : 'bg-gray-100 text-gray-500'"
+                                    @click="setTimeRange('week')">周</button>
+                            <button class="px-3 py-1 text-xs rounded" 
+                                    :class="timeRange === 'month' ? 'bg-blue-50 text-blue-500' : 'bg-gray-100 text-gray-500'"
+                                    @click="setTimeRange('month')">月</button>
+                        </div>
+                    </div>
+                    <div class="h-64">
+                        <canvas id="alarmTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 告警列表 -->
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base font-medium text-gray-800">告警列表</h2>
+                    <div class="flex items-center space-x-2">
+                        <div class="relative">
+                            <input type="text" v-model="searchQuery" placeholder="搜索告警..." 
+                                   class="pl-8 pr-4 py-1 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500">
+                            <i class="fas fa-search text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                        </div>
+                        <select v-model="filterSite" class="text-sm border rounded-md px-2 py-1">
+                            <option v-for="site in siteOptions" :key="site">{{ site }}</option>
+                        </select>
+                        <select v-model="filterLevel" class="text-sm border rounded-md px-2 py-1">
+                            <option v-for="level in levelOptions" :key="level">{{ level }}</option>
+                        </select>
+                        <select v-model="filterStatus" class="text-sm border rounded-md px-2 py-1">
+                            <option v-for="status in statusOptions" :key="status">{{ status }}</option>
+                        </select>
+                        <button @click="applyFilter" class="px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                            <i class="fas fa-filter mr-1"></i>筛选
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="alarm-table">
+                        <thead>
+                            <tr>
+                                <th>告警ID</th>
+                                <th>告警级别</th>
+                                <th>告警内容</th>
+                                <th>站点</th>
+                                <th>设备</th>
+                                <th>发生时间</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="alarm in paginatedAlarms" :key="alarm.id">
+                                <td>{{ alarm.id }}</td>
+                                <td><span class="status-badge" :class="'status-' + alarm.level">{{ alarm.levelText }}</span></td>
+                                <td>{{ alarm.content }}</td>
+                                <td>{{ alarm.site }}</td>
+                                <td>{{ alarm.device }}</td>
+                                <td>{{ alarm.time }}</td>
+                                <td><span class="status-badge" :class="'status-' + alarm.status">{{ alarm.statusText }}</span></td>
+                                <td>
+                                    <button @click="showAlarmDetail(alarm)" class="tooltip text-blue-500 hover:text-blue-700 mr-2">
+                                        <i class="fas fa-eye"></i>
+                                        <span class="tooltip-text">查看详情</span>
+                                    </button>
+                                    <button v-if="alarm.status === 'info'" @click="createTicket(alarm)" class="tooltip text-orange-500 hover:text-orange-700">
+                                        <i class="fas fa-ticket-alt"></i>
+                                        <span class="tooltip-text">创建工单</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 分页 -->
+                <div class="flex items-center justify-between mt-4">
+                    <div class="text-sm text-gray-500">
+                        {{ paginationText }}
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <button @click="prevPage" class="px-3 py-1 text-sm border rounded-md text-gray-500 hover:bg-gray-50">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button v-for="page in displayPageRange" :key="page" 
+                                @click="changePage(page)"
+                                class="px-3 py-1 text-sm border rounded-md" 
+                                :class="currentPage === page ? 'bg-blue-50 text-blue-500' : 'text-gray-500 hover:bg-gray-50'">
+                            {{ page }}
+                        </button>
+                        <button @click="nextPage" class="px-3 py-1 text-sm border rounded-md text-gray-500 hover:bg-gray-50">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 告警详情弹窗 -->
+        <transition name="fade">
+            <div v-if="detailModalVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl" @click.stop>
+                    <div class="p-4 border-b flex justify-between items-center">
+                        <h3 class="text-lg font-medium">告警详情</h3>
+                        <button @click="closeDetailModal" class="tooltip text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                            <span class="tooltip-text">关闭</span>
+                        </button>
+                    </div>
+                    
+                    <div class="p-4" v-if="currentAlarm">
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <div class="text-sm text-gray-500 mb-1">告警ID</div>
+                                <div class="font-medium">{{ currentAlarm.id }}</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-500 mb-1">告警级别</div>
+                                <div class="font-medium">
+                                    <span class="status-badge" :class="'status-' + currentAlarm.level">{{ currentAlarm.levelText }}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-500 mb-1">站点</div>
+                                <div class="font-medium">{{ currentAlarm.site }}</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-500 mb-1">设备</div>
+                                <div class="font-medium">{{ currentAlarm.device }}</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-500 mb-1">发生时间</div>
+                                <div class="font-medium">{{ currentAlarm.time }}</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-500 mb-1">状态</div>
+                                <div class="font-medium">
+                                    <span class="status-badge" :class="'status-' + currentAlarm.status">{{ currentAlarm.statusText }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="text-sm text-gray-500 mb-1">告警内容</div>
+                            <div class="font-medium">{{ currentAlarm.content }}</div>
+                        </div>
+                        
+                        <div class="mb-4" v-if="currentAlarm.description">
+                            <div class="text-sm text-gray-500 mb-1">告警描述</div>
+                            <div class="text-sm bg-gray-50 p-3 rounded">
+                                {{ currentAlarm.description }}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4" v-if="currentAlarm.records && currentAlarm.records.length">
+                            <div class="text-sm text-gray-500 mb-1">处理记录</div>
+                            <div class="text-sm">
+                                <div v-for="(record, index) in currentAlarm.records" :key="index" class="bg-gray-50 p-3 rounded mb-2">
+                                    <div class="flex justify-between mb-1">
+                                        <span class="font-medium">{{ record.engineer }}</span>
+                                        <span class="text-gray-500">{{ record.time }}</span>
+                                    </div>
+                                    <p>{{ record.content }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="handle-form" class="mb-4">
+                            <div class="text-sm text-gray-500 mb-1">处理意见</div>
+                            <textarea v-model="handleForm.description" class="w-full border rounded-md p-2 text-sm" rows="3" placeholder="请输入处理意见..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 border-t flex justify-end space-x-2">
+                        <button @click="closeDetailModal" class="tooltip px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                            关闭
+                            <span class="tooltip-text">关闭详情</span>
+                        </button>
+                        <button @click="showConfirmModal" class="tooltip px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+                            确认处理
+                            <span class="tooltip-text">确认处理告警</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+        
+        <!-- 处理确认弹窗 -->
+        <transition name="fade">
+            <div v-if="confirmModalVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg shadow-xl w-full max-w-md" @click.stop>
+                    <div class="p-4 border-b">
+                        <h3 class="text-lg font-medium">确认处理</h3>
+                    </div>
+                    
+                    <div class="p-4" v-if="currentAlarm">
+                        <p class="mb-4">确认将告警 <span class="font-medium">{{ currentAlarm.id }}</span> 标记为已处理？</p>
+                        
+                        <div class="mb-4">
+                            <div class="text-sm text-gray-500 mb-1">处理结果</div>
+                            <select v-model="handleForm.result" class="w-full border rounded-md p-2 text-sm">
+                                <option v-for="result in resultOptions" :key="result">{{ result }}</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="text-sm text-gray-500 mb-1">处理说明</div>
+                            <textarea v-model="handleForm.description" class="w-full border rounded-md p-2 text-sm" rows="3" placeholder="请输入处理说明..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 border-t flex justify-end space-x-2">
+                        <button @click="closeConfirmModal" class="tooltip px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                            取消
+                            <span class="tooltip-text">取消处理</span>
+                        </button>
+                        <button @click="submitHandle" class="tooltip px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+                            确认
+                            <span class="tooltip-text">提交处理结果</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+    </div>
+    
+    <!-- 引入 Vue.js 脚本 -->
+    <script src="js/alarm-script.js"></script>
+</body>
+</html> 

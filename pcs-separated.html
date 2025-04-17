@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCS管理 - 分布式储能系统</title>
+    <!-- TailwindCSS -->
+    <link rel="stylesheet" href="css/tailwind.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="css/all.min.css">
+    <!-- Chart.js -->
+    <script src="js/vendor/chart.min.js"></script>
+    <!-- Vue 3 -->
+    <script src="js/vue.global.prod.js"></script>
+    <!-- 自定义样式 -->
+    <link rel="stylesheet" href="css/pcs-styles.css">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+</head>
+<body class="bg-gray-50">
+<div id="app" class="min-h-screen flex flex-col">
+    <!-- 顶部导航栏 -->
+    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-20 h-16 flex items-center px-4">
+        <img src="2.png" alt="Bitower" class="h-8 w-auto mr-4">
+        <nav class="flex-1 flex items-center space-x-6">
+            <a href="#" class="text-gray-600 hover:text-blue-600 text-sm">驾驶舱</a>
+            <a href="#" class="text-gray-600 hover:text-blue-600 text-sm">站点列表</a>
+            <a href="#" class="text-gray-600 hover:text-blue-600 text-sm">告警中心</a>
+            <a href="#" class="text-gray-600 hover:text-blue-600 text-sm">消息通知</a>
+        </nav>
+        <div class="flex items-center space-x-4">
+            <a href="#" class="text-gray-600 hover:text-blue-600"><i class="fas fa-cog"></i></a>
+            <a href="#" class="text-gray-600 hover:text-blue-600"><i class="fas fa-user-circle"></i></a>
+        </div>
+        <!-- 侧边栏切换按钮（移动端） -->
+        <div v-if="isMobile" id="sidebar-toggle-btn" class="fixed top-4 left-4 z-50 bg-white rounded-full shadow p-2 text-gray-600 md:hidden cursor-pointer" @click="sidebarOpen = true">
+            <i class="fas fa-bars"></i>
+        </div>
+    </header>
+
+    <!-- 侧边栏（抽屉式） -->
+    <aside :class="['fixed top-16 left-0 bottom-0 bg-white shadow-lg z-50 w-60 transition-transform duration-300']"
+           :style="isMobile ? (sidebarOpen ? 'transform: translateX(0);' : 'transform: translateX(-100%);') : ''">
+        <nav class="py-6 space-y-2">
+            <a href="#" class="block px-6 py-2 text-gray-700 hover:bg-blue-50 rounded">站点概况</a>
+            <div>
+                <div class="px-6 py-2 text-gray-700 font-semibold flex items-center"><i class="fas fa-battery-three-quarters mr-2"></i>电池管理</div>
+                <div class="pl-10 space-y-1">
+                    <a href="#" class="block py-1 text-blue-600 font-bold">PCS</a>
+                    <a href="#" class="block py-1 text-gray-600">电池包</a>
+                </div>
+            </div>
+            <a href="#" class="block px-6 py-2 text-gray-700 hover:bg-blue-50 rounded">收益报表</a>
+            <a href="#" class="block px-6 py-2 text-gray-700 hover:bg-blue-50 rounded">业务调度日历</a>
+            <a href="#" class="block px-6 py-2 text-gray-700 hover:bg-blue-50 rounded">站点报警</a>
+            <a href="#" class="block px-6 py-2 text-gray-700 hover:bg-blue-50 rounded">工单管理</a>
+            <a href="#" class="block px-6 py-2 text-gray-700 hover:bg-blue-50 rounded">数据监控</a>
+        </nav>
+    </aside>
+
+    <!-- 主内容区 -->
+    <div :class="[isMobile ? 'pt-16' : 'pt-16 ml-60']" class="flex-1 min-h-0 flex flex-col transition-all duration-300">
+        <main class="flex-1 overflow-y-auto" style="height:calc(100vh - 64px);">
+            <div class="w-full p-4">
+                <!-- 页面标题 -->
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-xl font-semibold text-gray-800">PCS管理</h1>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-500">最后更新: 2023-08-15 14:32:45</span>
+                        <button class="p-1 rounded-full hover:bg-gray-200 transition-colors"><i class="fas fa-sync-alt text-gray-600 text-sm"></i></button>
+                    </div>
+                </div>
+                <!-- PCS状态概览 -->
+                <div class="glass-card p-4 mb-4">
+                    <h2 class="card-title">PCS状态概览</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-3">
+                        <div class="bg-blue-50 rounded-lg p-3">
+                            <div class="flex items-center justify-between"><div class="text-xs text-gray-500">系统状态</div><i class="fas fa-check-circle text-blue-500 text-sm"></i></div>
+                            <div class="text-lg font-semibold mt-1">正常运行</div>
+                            <div class="text-xs text-gray-500 mt-1">运行时间: 1,245小时</div>
+                        </div>
+                        <div class="bg-green-50 rounded-lg p-3">
+                            <div class="flex items-center justify-between"><div class="text-xs text-gray-500">总功率</div><i class="fas fa-bolt text-green-500 text-sm"></i></div>
+                            <div class="text-lg font-semibold mt-1">3.2 MW</div>
+                            <div class="flex items-center text-xs text-gray-500 mt-2"><span>额定功率: 5 MW</span><span class="ml-1 text-green-500">(64%)</span></div>
+                        </div>
+                        <div class="bg-yellow-50 rounded-lg p-3">
+                            <div class="flex items-center justify-between"><div class="text-xs text-gray-500">转换效率</div><i class="fas fa-exchange-alt text-yellow-500 text-sm"></i></div>
+                            <div class="text-lg font-semibold mt-1">81.8%</div>
+                            <div class="flex items-center text-xs text-gray-500 mt-2"><span>设计效率: 85.0%</span></div>
+                        </div>
+                        <div class="bg-purple-50 rounded-lg p-3">
+                            <div class="flex items-center justify-between"><div class="text-xs text-gray-500">温度</div><i class="fas fa-temperature-half text-purple-500 text-sm"></i></div>
+                            <div class="text-lg font-semibold mt-1">42.5°C</div>
+                            <div class="flex items-center text-xs text-gray-500 mt-2"><span>最高允许: 65°C</span></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- PCS设备选择器 -->
+                <div class="glass-card p-4 mb-4">
+                    <h2 class="card-title">PCS设备</h2>
+                    <div class="flex items-center space-x-4 mt-2">
+                        <div class="w-1/3">
+                            <label class="block text-xs text-gray-500 mb-1">选择PCS</label>
+                            <select id="pcs-select-dropdown" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option selected>PCS #01</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <!-- PCS详细信息卡片 -->
+                <div class="glass-card p-4 mb-4">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 id="pcs-details-title" class="card-title">PCS #01 详细信息</h2>
+                            <div class="flex items-center mt-1"><span class="status-indicator status-normal"></span><span class="text-sm text-gray-600">正常运行</span></div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div><div class="text-xs text-gray-500">功率</div><div class="text-lg font-medium">750 kW</div><div class="progress-bar mt-1"><div class="progress-fill bg-blue-500" style="width: 75%"></div></div></div>
+                        <div><div class="text-xs text-gray-500">效率</div><div class="text-lg font-medium">97.0%</div><div class="progress-bar mt-1"><div class="progress-fill bg-green-500" style="width: 97%"></div></div></div>
+                        <div><div class="text-xs text-gray-500">温度</div><div class="text-lg font-medium">40.8°C</div><div class="progress-bar mt-1"><div class="progress-fill bg-yellow-500" style="width: 68%"></div></div></div>
+                        <div><div class="text-xs text-gray-500">运行模式</div><div class="text-lg font-medium">放电</div><div class="text-xs text-gray-500 mt-1">已运行: 4.5小时</div></div>
+                    </div>
+                    <div class="card-divider"></div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
+                        <div><div class="text-xs text-gray-500">输入电压</div><div class="text-sm font-medium">380V</div></div>
+                        <div><div class="text-xs text-gray-500">输出电压</div><div class="text-sm font-medium">220V</div></div>
+                        <div><div class="text-xs text-gray-500">频率</div><div class="text-sm font-medium">50Hz</div></div>
+                        <div><div class="text-xs text-gray-500">功率因数</div><div class="text-sm font-medium">0.98</div></div>
+                    </div>
+                </div>
+                <!-- 功率曲线图 -->
+                <div class="glass-card p-4 mb-4">
+                    <h2 class="card-title">功率曲线</h2>
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-xs text-gray-500">显示最近24小时功率变化</div>
+                        <div class="flex items-center space-x-2">
+                            <button :class="['text-xs px-2 py-1 rounded', powerDays===1 ? 'bg-blue-50 text-blue-500' : 'text-gray-500 hover:bg-gray-100']" @click="setPowerDays(1)">24小时</button>
+                            <button :class="['text-xs px-2 py-1 rounded', powerDays===7 ? 'bg-blue-50 text-blue-500' : 'text-gray-500 hover:bg-gray-100']" @click="setPowerDays(7)">7天</button>
+                            <button :class="['text-xs px-2 py-1 rounded', powerDays===30 ? 'bg-blue-50 text-blue-500' : 'text-gray-500 hover:bg-gray-100']" @click="setPowerDays(30)">30天</button>
+                        </div>
+                    </div>
+                    <div class="chart-container" style="height: 240px;">
+                        <canvas id="powerChart"></canvas>
+                    </div>
+                </div>
+                <!-- 效率分析卡片 -->
+                <div class="glass-card p-4 mb-4">
+                    <h2 class="card-title">PCS效率分析</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                        <div><div class="chart-container" style="height: 200px;"><canvas id="efficiencyChart"></canvas></div></div>
+                        <div>
+                            <div class="bg-blue-50 rounded-lg p-3 mb-3"><div class="flex items-center justify-between"><div class="text-xs text-gray-500">平均效率</div><i class="fas fa-tachometer-alt text-blue-500 text-sm"></i></div><div class="text-lg font-semibold mt-1">96.8%</div><div class="text-xs text-gray-500 mt-1">较上月 <span class="text-green-500">+0.2%</span></div></div>
+                            <div class="bg-green-50 rounded-lg p-3"><div class="flex items-center justify-between"><div class="text-xs text-gray-500">最佳效率PCS</div><i class="fas fa-award text-green-500 text-sm"></i></div><div class="text-lg font-semibold mt-1">PCS #02 (97.8%)</div><div class="text-xs text-gray-500 mt-1">运行时间: 4,328小时</div></div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 mb-2">
+                        <button :class="['text-xs px-2 py-1 rounded', efficiencyDays===7 ? 'bg-blue-50 text-blue-500' : 'text-gray-500 hover:bg-gray-100']" @click="setEfficiencyDays(7)">7天</button>
+                        <button :class="['text-xs px-2 py-1 rounded', efficiencyDays===30 ? 'bg-blue-50 text-blue-500' : 'text-gray-500 hover:bg-gray-100']" @click="setEfficiencyDays(30)">30天</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <!-- 遮罩层（必须在#app内，v-if控制） -->
+        <div v-if="isMobile && sidebarOpen"
+             class="fixed inset-0 bg-black bg-opacity-50 z-40"
+             @click="sidebarOpen = false"></div>
+    </div>
+</div>
+
+<!-- 用于挂载 Vue 逻辑的外部脚本 -->
+<script src="js/pcs-script.js"></script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+/* body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow: auto; 
+    margin: 0;
+    padding: 0;
+} */
+.glass-card {
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    margin-bottom: 12px;
+}
+/* .sidebar-item {
+    transition: all 0.2s ease;
+} */
+/* .sidebar-item:hover:not(.active) {
+    background-color: rgba(243, 244, 246, 0.8);
+} */
+/* .sidebar-item.active {
+    background-color: rgba(219, 234, 254, 0.5);
+    color: #3b82f6;
+    font-weight: 500;
+} */
+.submenu {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+.submenu.open {
+    max-height: 200px;
+}
+/* .nav-item {
+    position: relative;
+    transition: all 0.2s ease;
+} */
+/* .nav-item.active {
+    color: #3b82f6;
+} */
+.card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 12px;
+}
+.card-divider {
+    height: 1px;
+    background-color: rgba(229, 231, 235, 0.5);
+    margin: 12px 0;
+}
+/* .info-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: rgba(219, 234, 254, 0.5);
+    color: #3b82f6;
+} */
+
+/* 自定义滚动条 */
+.content-scrollable::-webkit-scrollbar {
+    width: 4px;
+}
+
+.content-scrollable::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.content-scrollable::-webkit-scrollbar-thumb {
+    background-color: rgba(203, 213, 225, 0.5);
+    border-radius: 20px;
+}
+
+/* PCS页面特定样式 */
+.pcs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.pcs-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pcs-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+.status-normal {
+    background-color: #10b981;
+}
+
+.status-warning {
+    background-color: #f59e0b;
+}
+
+.status-alert {
+    background-color: #ef4444;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 4px;
+    background-color: rgba(229, 231, 235, 0.5);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 2px;
+}
+
+/* 添加内容区域滚动样式 */
+.main-content-wrapper {
+    width: 100%;
+    position: relative;
+    overflow: visible !important;
+    height: auto;
+}
+
+.main-container {
+    overflow: visible !important;
+    height: auto;
+}
+
+.dashboard-content-scrollable {
+    height: calc(100vh - 64px);
+    overflow-y: auto !important;
+    overflow-x: visible;
+    padding-right: 8px;
+    pointer-events: auto !important;
+    position: relative;
+}
+
+/* 自定义滚动条样式 */
+.dashboard-content-scrollable::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dashboard-content-scrollable::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.dashboard-content-scrollable::-webkit-scrollbar-thumb {
+    background-color: rgba(203, 213, 225, 0.5);
+    border-radius: 20px;
+}
+
+.dashboard-content-scrollable::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(203, 213, 225, 0.8);
+}
+
+.dashboard-content {
+    transition: opacity 0.3s ease;
+}
+[v-cloak] { display: none; }
+
+/* 强制允许主内容区域选择 */
+main {
+    user-select: auto !important;
+    pointer-events: auto !important; /* 确保main本身允许事件 */
+}
+
+@media (max-width: 1024px) {
+  aside {
+    width: 80%;
+    max-width: 300px;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    background: #fff;
+    box-shadow: 2px 0 16px rgba(0,0,0,0.25);
+    position: fixed;
+    left: 0;
+    top: 64px;
+    bottom: 0;
+    height: auto;
+    overflow-y: auto;
+  }
+  aside.show {
+    transform: translateX(0);
+  }
+  .main-container {
+    background: transparent !important;
+    overflow: visible !important;
+    z-index: auto !important;
+  }
+  main {
+    margin-left: 0 !important;
+  }
+}

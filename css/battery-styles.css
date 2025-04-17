@@ -1,0 +1,422 @@
+/* Base styles from battery.html */
+body, html {
+    margin: 0;
+    padding: 0;
+    background-color: #f3f4f6;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Common styles from income-styles.css / order-separated.css */
+.main-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.content-container {
+    flex: 1;
+    overflow: hidden; /* Prevents double scrollbars initially */
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-content {
+    flex: 1;
+    overflow-y: auto; /* Enable vertical scroll */
+    padding-bottom: 20px; /* Add padding at the bottom */
+}
+
+.ml-60 {
+    margin-left: 15rem; /* Ensure this matches sidebar width */
+}
+
+.mt-16 {
+    margin-top: 4rem; /* Ensure this matches header height */
+}
+
+/* 移动响应式布局 */
+@media (max-width: 768px) {
+    .ml-60 {
+        margin-left: 0; /* 在移动设备上移除左侧边距 */
+    }
+    
+    aside.sidebar-mobile {
+        transform: translateX(-100%); /* 默认隐藏 */
+        transition: transform 0.3s ease;
+        width: 80%; /* 在移动设备上占据80%宽度 */
+        max-width: 300px;
+        z-index: 50; /* 确保在其他元素上方 */
+    }
+    
+    aside.sidebar-mobile.open {
+        transform: translateX(0); /* 显示侧边栏 */
+    }
+    
+    .mobile-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 40;
+        transition: opacity 0.3s ease;
+    }
+    
+    .mobile-overlay.active {
+        display: block;
+    }
+    
+    .mobile-menu-button {
+        display: block;
+        position: fixed;
+        top: 0.75rem;
+        left: 0.75rem;
+        z-index: 30;
+        padding: 0.5rem;
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 0.375rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+}
+
+@media (min-width: 769px) {
+    .mobile-menu-button {
+        display: none; /* 在桌面设备上隐藏菜单按钮 */
+    }
+    
+    .mobile-overlay {
+        display: none; /* 在桌面设备上隐藏遮罩层 */
+    }
+}
+
+/* Glass Card Effect */
+.glass-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    backdrop-filter: blur(4px);
+}
+
+/* Card Title */
+.card-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+/* Info Icon (Used in Overview cards) */
+.info-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: rgba(219, 234, 254, 0.5); /* blue-100 opacity 50 */
+    color: #3b82f6; /* blue-500 */
+}
+
+/* Sidebar Styles */
+.sidebar {
+    transition: transform 0.3s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* 用于图标旋转的动画 */
+.rotate-180 {
+    transform: rotate(180deg);
+}
+
+.fa-chevron-down {
+    transition: transform 0.3s ease;
+}
+
+.sidebar-item {
+    transition: all 0.2s ease;
+    color: #4b5563; /* gray-600 */
+    cursor: pointer;
+}
+
+.sidebar-item:hover:not(.active):not(.active-parent) {
+    background-color: rgba(243, 244, 246, 0.8); /* gray-100 opacity 80 */
+    color: #111827; /* gray-900 */
+}
+
+.sidebar-item.active {
+    background-color: rgba(219, 234, 254, 0.6); /* blue-100 opacity 60 */
+    color: #2563eb; /* blue-600 */
+    font-weight: 500;
+    border-left: 3px solid #3b82f6; /* blue-500 */
+    padding-left: calc(1rem - 3px); /* Adjust padding for border */
+}
+
+.sidebar-item.active-parent {
+     background-color: rgba(243, 244, 246, 0.5); /* Lighter gray for active parent */
+     color: #1f2937; /* gray-800 */
+     font-weight: 500;
+}
+
+.submenu {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    background-color: rgba(249, 250, 251, 0.5); /* gray-50 opacity 50 */
+}
+
+.submenu.open {
+    max-height: 200px; /* Adjust as needed */
+}
+
+.submenu .sidebar-item {
+     padding-left: 2.5rem; /* Indent submenu items */
+}
+
+.submenu .sidebar-item.active {
+    background-color: rgba(219, 234, 254, 0.6); /* blue-100 opacity 60 */
+    color: #2563eb; /* blue-600 */
+    font-weight: 500;
+    border-left: none; /* Remove left border for submenu active item */
+    padding-left: 2.5rem; /* Keep consistent padding */
+}
+
+/* Navbar Styles */
+.nav-item {
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.nav-item.active {
+    color: #3b82f6; /* blue-500 */
+    border-bottom: 2px solid #3b82f6;
+}
+
+/* Custom Scrollbar */
+.dashboard-content-scrollable::-webkit-scrollbar {
+    width: 5px;
+}
+
+.dashboard-content-scrollable::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.dashboard-content-scrollable::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.5); /* gray-400 opacity 50 */
+    border-radius: 20px;
+}
+
+.dashboard-content-scrollable::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(107, 114, 128, 0.6); /* gray-500 opacity 60 */
+}
+
+/* Battery Page Specific Styles */
+
+/* Input Select */
+.select-input {
+     width: 100%; 
+     padding: 0.5rem 0.75rem; /* py-2 px-3 */
+     border: 1px solid #d1d5db; /* border-gray-300 */
+     border-radius: 0.375rem; /* rounded-md */
+     font-size: 0.875rem; /* text-sm */
+     line-height: 1.25rem;
+     background-color: white;
+     transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.select-input:focus {
+    outline: none;
+    border-color: #3b82f6; /* focus:border-blue-500 */
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); /* focus:ring-2 focus:ring-blue-500 */
+}
+
+/* Status Indicator */
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    display: inline-block; /* Ensure it displays correctly */
+}
+
+.status-normal {
+    background-color: #10b981; /* green-500 */
+}
+
+.status-warning {
+    background-color: #f59e0b; /* yellow-500 */
+}
+
+.status-alert {
+    background-color: #ef4444; /* red-500 */
+}
+
+/* Status Overview Cards */
+.status-card {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Progress Bar */
+.progress-bar {
+    height: 6px;
+    background-color: rgba(229, 231, 235, 0.5); /* gray-200 opacity 50 */
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease-in-out;
+}
+
+/* Battery Cell Visualization */
+.battery-cell-container {
+    padding: 2px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.battery-cell {
+    width: 24px;
+    height: 32px;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    position: relative;
+    background-color: #fff;
+}
+
+.cell-normal {
+    background-color: #10b981;
+}
+
+.cell-min {
+    background-color: #f59e0b;
+}
+
+.cell-max {
+    background-color: #ef4444;
+}
+
+.cell-inactive {
+    background-color: #9ca3af;
+}
+
+.grid-cols-16 {
+    display: grid;
+    grid-template-columns: repeat(16, minmax(0, 1fr));
+    gap: 0.25rem;
+}
+
+/* 添加电压值样式 */
+.battery-cell-container .text-xs {
+    font-size: 0.7rem; /* 更小的字体大小 */
+    color: #4b5563; /* 更深的文字颜色 */
+    margin-top: 1px; /* 减小与格子的间距 */
+}
+
+/* History Time Range Buttons */
+.history-button {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #e5e7eb;
+    background-color: white;
+    color: #4b5563;
+    font-size: 0.875rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s;
+}
+
+.history-button:hover {
+    background-color: #f9fafb;
+}
+
+.history-button.active {
+    background-color: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+/* History Table */
+.history-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.history-table th {
+    background-color: #f9fafb;
+    padding: 0.75rem;
+    font-weight: 500;
+    text-align: left;
+    color: #4b5563;
+}
+
+.history-table td {
+    padding: 0.75rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+/* Status Badge */
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+}
+
+.status-completed {
+    background-color: #d1fae5;
+    color: #059669;
+}
+
+.status-inprogress {
+    background-color: #dbeafe;
+    color: #3b82f6;
+}
+
+/* Pagination Buttons */
+.pagination-button {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e5e7eb;
+    background-color: white;
+    color: #4b5563;
+    font-size: 0.875rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s;
+}
+
+.pagination-button:hover {
+    background-color: #f9fafb;
+}
+
+.pagination-button.active {
+    background-color: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+/* Chart Container */
+.chart-container {
+    position: relative;
+    width: 100%;
+}
+
+/* 图例样式 */
+.cell-legend {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    margin-right: 4px;
+    display: inline-block;
+}
+
+/* 布局容器 */
+.container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 1rem;
+} 

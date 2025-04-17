@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>收益报表 - 分布式储能系统</title>
+    <!-- Local CSS -->
+    <link rel="stylesheet" href="css/tailwind.min.css">
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/income-styles.css">
+</head>
+<body class="bg-gray-50">
+    <div class="main-container">
+        <!-- 顶部导航栏 (from order-separated.html) -->
+        <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-20">
+            <div class="max-w-full mx-auto px-4">
+                <div class="flex items-center justify-between h-16">
+                    <!-- Logo 区域 -->
+                    <div class="flex-shrink-0 flex items-center pl-2 sm:pl-4 md:pl-6 lg:pl-8">
+                        <img src="2.png" alt="Bitower" class="h-8 w-auto">
+                    </div>
+                    <!-- 导航菜单 - 桌面版 -->
+                    <div class="hidden md:flex md:items-center md:justify-center md:flex-1">
+                        <nav class="flex flex-wrap justify-center space-x-1 sm:space-x-2 md:space-x-4 lg:space-x-10">
+                            <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>驾驶舱</span>
+                            </a>
+                            <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>站点列表</span>
+                            </a>
+                            <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>告警中心</span>
+                            </a>
+                            <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>消息通知</span>
+                            </a>
+                        </nav>
+                    </div>
+                    
+                     <!-- 右侧图标区域 -->
+                     <div class="hidden md:flex items-center space-x-4 pr-2 sm:pr-4 md:pr-6 lg:pr-8">
+                        <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors">
+                            <i class="fas fa-cog text-lg"></i>
+                            <span class="sr-only">管理</span>
+                        </a>
+                        <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors">
+                            <i class="fas fa-user-circle text-lg"></i>
+                            <span class="sr-only">我的</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 左侧子导航菜单（桌面端） -->
+        <aside class="fixed left-0 top-16 bottom-0 w-60 bg-white shadow-sm z-10 overflow-y-auto">
+            <nav class="py-4">
+                <div class="sidebar-item  px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-home text-lg w-6"></i>
+                    <span>站点概况</span>
+                </div>
+                <div class="sidebar-parent">
+                    <div class="sidebar-item px-4 py-3 flex items-center justify-between cursor-pointer" @click="toggleSubmenu('battery')">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-battery-three-quarters text-lg w-6"></i>
+                            <span>电池管理</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-sm transition-transform" :class="{ 'rotate-180': submenuStates.battery }"></i>
+                    </div>
+                    <div class="submenu pl-7 space-y-1" :class="{ open: submenuStates.battery }">
+                        <a href="#" class="sidebar-item flex items-center px-3 py-2 text-sm rounded-md">
+                            <i class="fas fa-bolt w-5 text-center mr-2"></i>
+                            <span>PCS</span>
+                        </a>
+                        <a href="#" class="sidebar-item flex items-center px-3 py-2 text-sm rounded-md">
+                            <i class="fas fa-cubes w-5 text-center mr-2"></i>
+                            <span>电池包</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="sidebar-item active px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-chart-line text-lg w-6"></i>
+                    <span>收益报表</span>
+                </div>
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-calendar-alt text-lg w-6"></i>
+                    <span>业务调度日历</span>
+                </div>
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-exclamation-triangle text-lg w-6"></i>
+                    <span>站点报警</span>
+                </div>
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-clipboard-list text-lg w-6"></i>
+                    <span>工单管理</span>
+                </div>
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-desktop text-lg w-6"></i>
+                    <span>数据监控</span>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- 主内容区域 (Vue app mount point) -->
+        <main id="app" class="content-container ml-60 mt-16 p-6 dashboard-content dashboard-content-scrollable"> 
+            <!-- 页面标题 (from income.html) -->
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-xl font-semibold text-gray-800">收益报表</h1>
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-500">最后更新: {{ lastUpdateTime }}</span>
+                    <button @click="refreshData" class="p-1 rounded-full hover:bg-gray-200 transition-colors">
+                        <i class="fas fa-sync-alt text-gray-600 text-sm"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 收益概览 (from income.html, adapted for Vue) -->
+            <div class="glass-card p-4 mb-6">
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="flex items-center">
+                        <div class="info-icon mr-3">
+                            <i class="fas fa-yen-sign"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 mb-1">今日收益</div>
+                            <div class="text-xl font-semibold">¥{{ formatCurrency(overview.daily.value) }}</div>
+                            <div class="text-xs mt-1" :class="overview.daily.up ? 'text-green-500' : 'text-red-500'">
+                                <i :class="['fas', overview.daily.up ? 'fa-arrow-up' : 'fa-arrow-down', 'mr-1']"></i>{{ overview.daily.trend }}%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="info-icon mr-3">
+                            <i class="fas fa-calendar-week"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 mb-1">本月累计</div>
+                            <div class="text-xl font-semibold">¥{{ formatCurrency(overview.monthly.value) }}</div>
+                             <div class="text-xs mt-1" :class="overview.monthly.up ? 'text-green-500' : 'text-red-500'">
+                                <i :class="['fas', overview.monthly.up ? 'fa-arrow-up' : 'fa-arrow-down', 'mr-1']"></i>{{ overview.monthly.trend }}%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="info-icon mr-3">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 mb-1">年度累计</div>
+                            <div class="text-xl font-semibold">¥{{ formatCurrency(overview.yearly.value) }}</div>
+                             <div class="text-xs mt-1" :class="overview.yearly.up ? 'text-green-500' : 'text-red-500'">
+                                <i :class="['fas', overview.yearly.up ? 'fa-arrow-up' : 'fa-arrow-down', 'mr-1']"></i>{{ overview.yearly.trend }}%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="info-icon mr-3">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 mb-1">总累计收益</div>
+                            <div class="text-xl font-semibold">¥{{ formatCurrency(overview.total.value) }}</div>
+                            <div class="text-xs text-gray-500 mt-1">自投运以来</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 时间筛选器 (from income.html, adapted for Vue) -->
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex space-x-2">
+                    <button @click="changeTimeRange('day')" :class="['tab-button px-4 py-2 text-xs rounded-md', timeRange.active === 'day' ? 'active bg-blue-50 text-blue-500' : 'bg-gray-50 text-gray-500 hover:bg-gray-100']">日</button>
+                    <button @click="changeTimeRange('week')" :class="['tab-button px-4 py-2 text-xs rounded-md', timeRange.active === 'week' ? 'active bg-blue-50 text-blue-500' : 'bg-gray-50 text-gray-500 hover:bg-gray-100']">周</button>
+                    <button @click="changeTimeRange('month')" :class="['tab-button px-4 py-2 text-xs rounded-md', timeRange.active === 'month' ? 'active bg-blue-50 text-blue-500' : 'bg-gray-50 text-gray-500 hover:bg-gray-100']">月</button>
+                    <button @click="changeTimeRange('year')" :class="['tab-button px-4 py-2 text-xs rounded-md', timeRange.active === 'year' ? 'active bg-blue-50 text-blue-500' : 'bg-gray-50 text-gray-500 hover:bg-gray-100']">年</button>
+                    <button @click="changeTimeRange('custom')" :class="['tab-button px-4 py-2 text-xs rounded-md', timeRange.active === 'custom' ? 'active bg-blue-50 text-blue-500' : 'bg-gray-50 text-gray-500 hover:bg-gray-100']">自定义</button>
+                </div>
+                <!-- Custom Date Range Inputs (v-if) -->
+                <div v-if="showCustomDateInputs" class="flex items-center space-x-2 ml-4">
+                     <input type="date" v-model="customStartDate" class="text-xs border rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                     <span class="text-xs text-gray-500">至</span>
+                     <input type="date" v-model="customEndDate" class="text-xs border rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                     <button @click="applyCustomDateRange" class="px-3 py-1.5 text-xs rounded-md bg-blue-500 text-white hover:bg-blue-600">应用</button>
+                     <button @click="cancelCustomDateRange" class="px-3 py-1.5 text-xs rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300">取消</button>
+                </div>
+            </div>
+            
+            <!-- 图表区域 (from income.html) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- 收益趋势图 - 占据左侧 -->
+                <div class="glass-card p-4">
+                    <h2 class="card-title">
+                        <i class="fas fa-chart-line"></i>收益趋势
+                    </h2>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- 业务类型收益对比图 - 占据右侧 -->
+                <div class="glass-card p-4">
+                    <h2 class="card-title">
+                        <i class="fas fa-chart-bar"></i>业务类型收益对比
+                    </h2>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="businessComparisonChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 收益日历热力图 (from income.html, adapted for Vue) -->
+            <div class="glass-card p-4 mb-8">
+                <h2 class="card-title mb-3">
+                    <i class="fas fa-calendar-day mr-2"></i>收益日历热力图
+                </h2>
+                
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-xs font-medium">{{ calendar.month }}</div>
+                    <div class="flex items-center space-x-1">
+                        <button class="p-1 rounded hover:bg-gray-100 text-gray-500">
+                            <i class="fas fa-chevron-left text-xs"></i>
+                        </button>
+                        <button class="p-1 rounded hover:bg-gray-100 text-gray-500">
+                            <i class="fas fa-chevron-right text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 星期标题行 -->
+                <div class="grid grid-cols-7 mb-1">
+                     <div v-for="dayName in ['日', '一', '二', '三', '四', '五', '六']" :key="dayName" class="text-xs text-center text-gray-500">{{ dayName }}</div>
+                </div>
+                
+                <!-- 日历网格 - 增加高度 -->
+                 <div class="grid grid-cols-7 gap-1">
+                    <div v-for="(day, index) in calendar.days" :key="index" 
+                         :class="['h-12 rounded border flex flex-col overflow-hidden', day.inCurrentMonth ? 'border-gray-200' : 'border-gray-100']">
+                        <div :class="['text-xs px-1 py-0.5 text-right', day.inCurrentMonth ? '' : 'text-gray-400']">{{ day.day }}</div>
+                        <div :class="['flex-grow flex items-center justify-center text-xs', getCalendarDayClass(day)]">
+                             <template v-if="day.amount !== null">
+                                ¥{{ formatCurrency(day.amount, 0) }} <!-- Format without decimals -->
+                            </template>
+                             <template v-else-if="!day.inCurrentMonth">
+                                 <span class="text-gray-400">-</span>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            <!-- 收益详细数据表格 (from income.html, adapted for Vue) -->
+            <div class="glass-card p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="card-title">
+                        <i class="fas fa-table"></i>收益详细数据
+                    </h2>
+                    <div class="flex items-center space-x-2">
+                        <button @click="exportExcel" class="text-xs px-3 py-1.5 rounded bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors">
+                            <i class="fas fa-file-excel mr-1"></i>导出Excel
+                        </button>
+                        <button @click="exportPDF" class="text-xs px-3 py-1.5 rounded bg-gray-50 text-gray-500 hover:bg-gray-100 transition-colors">
+                            <i class="fas fa-file-pdf mr-1"></i>导出PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="text-left text-xs text-gray-500 border-b border-gray-200">
+                                <th class="pb-2">日期</th>
+                                <th class="pb-2">总收益 (元)</th>
+                                <th class="pb-2">峰谷价差 (元)</th>
+                                <th class="pb-2">调频服务 (元)</th>
+                                <th class="pb-2">需求响应 (元)</th>
+                                <th class="pb-2">环比变化</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(item, index) in incomeData" :key="index" class="table-row text-sm border-b border-gray-100">
+                                <td class="py-3">{{ item.date }}</td>
+                                <td class="py-3 font-medium">{{ formatCurrency(item.total) }}</td>
+                                <td class="py-3">{{ formatCurrency(item.peakValley) }}</td>
+                                <td class="py-3">{{ formatCurrency(item.frequency) }}</td>
+                                <td class="py-3">{{ formatCurrency(item.demand) }}</td>
+                                <td class="py-3" :class="item.up ? 'text-green-500' : 'text-red-500'">
+                                    <i :class="['fas', item.up ? 'fa-arrow-up' : 'fa-arrow-down', 'mr-1']"></i>
+                                    {{ formatPercent(item.change) }}
+                                </td>
+                            </tr>
+                             <!-- Add row if no data -->
+                             <tr v-if="!incomeData || incomeData.length === 0">
+                                <td colspan="6" class="py-4 text-center text-sm text-gray-500">暂无数据</td>
+                             </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination placeholder -->
+                 <div class="flex justify-between items-center mt-4">
+                    <div class="text-sm text-gray-500">
+                        <!-- Placeholder for pagination info -->
+                         显示 {{ incomeData.length }} 条，共 {{ totalItems || incomeData.length }} 条 
+                    </div>
+                    <div class="flex space-x-1">
+                        <!-- Placeholder for pagination controls -->
+                        <button class="px-3 py-1 text-sm border rounded-md bg-white text-gray-500 hover:bg-gray-50">上一页</button>
+                        <button class="px-3 py-1 text-sm border rounded-md bg-blue-500 text-white">1</button>
+                        <button class="px-3 py-1 text-sm border rounded-md bg-white text-gray-500 hover:bg-gray-50">下一页</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+
+<!-- 遮罩层，仅在移动端显示侧边栏时显示 -->
+<!--<div v-if="isMobile && sidebarOpen" class="fixed inset-0 bg-black bg-opacity-50 z-30" @click="toggleSidebar"></div>-->
+</div>
+    <!-- Local JS -->
+    <script src="js/vue.min.js"></script>
+    <script src="js/vendor/chart.min.js"></script>
+    <script src="js/income-script.js"></script> 
+</body>
+</html>

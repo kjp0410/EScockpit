@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCS管理 - 分布式储能系统</title>
+    <!-- TailwindCSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- 添加 Chart.js -->
+    <script src="js/vendor/chart.min.js"></script>
+    <!-- 高德地图API (defer) -->
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=9e8264807bfc41a958e0d17aff56b146&plugin=AMap.ControlBar,AMap.ToolBar,AMap.Scale" defer></script>
+    <!-- 引入 Vue 3 (defer) - 确保此行存在 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js" defer></script>
+    <!-- 自定义样式表 -->
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: auto; /* 修改为auto允许滚动 */
+            margin: 0;
+            padding: 0;
+        }
+        .glass-card {
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 12px;
+        }
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        .sidebar-item:hover:not(.active) {
+            background-color: rgba(243, 244, 246, 0.8);
+        }
+        .sidebar-item.active {
+            background-color: rgba(219, 234, 254, 0.5);
+            color: #3b82f6;
+            font-weight: 500;
+        }
+        .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .submenu.open {
+            max-height: 200px;
+        }
+        .nav-item {
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .nav-item.active {
+            color: #3b82f6;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+        .card-divider {
+            height: 1px;
+            background-color: rgba(229, 231, 235, 0.5);
+            margin: 12px 0;
+        }
+        .info-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background-color: rgba(219, 234, 254, 0.5);
+            color: #3b82f6;
+        }
+        
+        /* 自定义滚动条 */
+        .content-scrollable::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .content-scrollable::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .content-scrollable::-webkit-scrollbar-thumb {
+            background-color: rgba(203, 213, 225, 0.5);
+            border-radius: 20px;
+        }
+        
+        /* PCS页面特定样式 */
+        .pcs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        
+        .pcs-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .pcs-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        
+        .status-normal {
+            background-color: #10b981;
+        }
+        
+        .status-warning {
+            background-color: #f59e0b;
+        }
+        
+        .status-alert {
+            background-color: #ef4444;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background-color: rgba(229, 231, 235, 0.5);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 2px;
+        }
+        
+        /* 添加内容区域滚动样式 */
+        .dashboard-content-scrollable {
+            height: calc(100vh - 64px); /* 减去顶部导航栏高度 */
+            overflow-y: auto;
+            padding-right: 8px; /* 为滚动条预留空间 */
+            pointer-events: auto !important; /* 确保内容区域允许事件 */
+            position: relative; /* z-index 生效需要 position 不是 static */
+            z-index: 1; /* 尝试设置一个较低的 z-index */
+        }
+        
+        /* 自定义滚动条样式 */
+        .dashboard-content-scrollable::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .dashboard-content-scrollable::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .dashboard-content-scrollable::-webkit-scrollbar-thumb {
+            background-color: rgba(203, 213, 225, 0.5);
+            border-radius: 20px;
+        }
+        
+        .dashboard-content-scrollable::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(203, 213, 225, 0.8);
+        }
+        
+        .dashboard-content {
+            transition: opacity 0.3s ease;
+        }
+        [v-cloak] { display: none; }
+        
+        /* 强制允许主内容区域选择 */
+        main {
+            user-select: auto !important; /* 尝试强制允许选择 */
+            pointer-events: auto !important; /* 确保main本身允许事件 */
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+<!-- 顶部导航栏 -->
+<header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-20">
+    <div class="max-w-full mx-auto px-4">
+        <div class="flex items-center justify-between h-16">
+            <!-- Logo 区域 - 替换为内联SVG避免外部图片加载错误 -->
+            <div class="flex-shrink-0 flex items-center pl-2 sm:pl-4 md:pl-6 lg:pl-8">
+                <!-- 使用内联SVG替代外部图片 -->
+                <svg class="h-8 w-auto" viewBox="0 0 120 30" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="120" height="30" fill="#f0f0f0"/>
+                    <text x="60" y="20" font-family="Arial" font-size="12" text-anchor="middle" fill="#333">EnergyLogo</text>
+                </svg>
+            </div>
+            
+            <!-- 导航菜单 - 桌面版 -->
+            <div class="hidden md:flex md:items-center md:justify-center md:flex-1">
+                <nav class="flex flex-wrap justify-center space-x-1 sm:space-x-2 md:space-x-4 lg:space-x-10">
+                    <a href="#" class="nav-item active text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-blue-500 text-blue-500">
+                        <span>驾驶舱</span>
+                    </a>
+                    <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                        <span>站点列表</span>
+                    </a>
+                    <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                        <span>告警中心</span>
+                    </a>
+                    <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                        <span>消息通知</span>
+                    </a>
+                </nav>
+            </div>
+            
+            <!-- 右侧图标区域 -->
+            <div class="hidden md:flex items-center space-x-4 pr-2 sm:pr-4 md:pr-6 lg:pr-8">
+                <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors">
+                    <i class="fas fa-cog text-lg"></i>
+                    <span class="sr-only">管理</span>
+                </a>
+                <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors">
+                    <i class="fas fa-user-circle text-lg"></i>
+                    <span class="sr-only">我的</span>
+                </a>
+            </div>
+            
+            <!-- 移动端菜单按钮 -->
+            <div class="md:hidden flex items-center">
+                <button id="mobile-menu-button" class="text-gray-500 hover:text-gray-600 focus:outline-none">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 移动端菜单 -->
+    <div id="mobile-menu" class="md:hidden hidden bg-white border-t border-gray-200">
+        <div class="px-2 pt-2 pb-3 space-y-1">
+            <a href="#" class="block px-3 py-2 rounded-md text-base font-medium text-blue-500 bg-blue-50">
+                驾驶舱
+            </a>
+            <a href="#" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">
+                站点列表
+            </a>
+            <a href="#" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">
+                告警中心
+            </a>
+            <a href="#" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">
+                消息通知
+            </a>
+            <a href="#" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">
+                <i class="fas fa-cog mr-2"></i>管理
+            </a>
+            <a href="#" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">
+                <i class="fas fa-user-circle mr-2"></i>我的
+            </a>
+        </div>
+    </div>
+</header>
+
+    <!-- 左侧侧边栏 -->
+    <aside class="fixed left-0 top-16 bottom-0 w-60 bg-white shadow-sm z-5 overflow-y-auto">
+        <div class="p-4">
+            <div class="text-sm text-gray-500 mb-2">站点信息</div>
+            <div class="text-base font-medium text-gray-800 mb-4">北京朝阳储能电站</div>
+            
+            <div class="space-y-1">
+                <a href="#" class="sidebar-item flex items-center px-3 py-2 text-sm rounded-md">
+                    <i class="fas fa-home w-5 text-center mr-2"></i>
+                    <span>站点概况</span>
+                </a>
+                
+                <div>
+                    <div id="battery-management" class="sidebar-item active flex items-center justify-between px-3 py-2 text-sm rounded-md cursor-pointer">
+                        <div class="flex items-center">
+                            <i class="fas fa-battery-three-quarters w-5 text-center mr-2"></i>
+                            <span>电池管理</span>
+                        </div>
+                        <i id="battery-chevron" class="fas fa-chevron-down text-xs transform rotate-180"></i>
+                    </div>
+                    
+                    <div id="battery-submenu" class="submenu open pl-7 space-y-1">
+                        <a href="#" class="sidebar-item active flex items-center px-3 py-2 text-sm rounded-md">
+                            <i class="fas fa-bolt w-5 text-center mr-2"></i>
+                            <span>PCS</span>
+                        </a>
+                        <!--<a href="#" class="sidebar-item flex items-center px-3 py-2 text-sm rounded-md">
+                            <i class="fas fa-box w-5 text-center mr-2"></i>
+                            <span>电池柜</span>
+                        </a>-->
+                        <a href="#" class="sidebar-item flex items-center px-3 py-2 text-sm rounded-md">
+                            <i class="fas fa-cubes w-5 text-center mr-2"></i>
+                            <span>电池包</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <a href="#" class="sidebar-item flex items-center px-3 py-2 text-sm rounded-md">
+                    <i class="fas fa-chart-line w-5 text-center mr-2"></i>
+                    <span>收益报表</span>
+                </a>
+                
+                <a href="#" class="sidebar-item flex items-center px-3 py-2 text-sm rounded-md">
+                    <i class="fas fa-calendar-alt w-5 text-center mr-2"></i>
+                    <span>业务调度日历</span>
+                </a>
+                
+                <a href="#" class="sidebar-item flex items-center px-3 py-2 text-sm rounded-md">
+                    <i class="fas fa-sliders-h w-5 text-center mr-2"></i>
+                    <span>充放电策略</span>
+                </a>
+                
+                <a href="#" class="sidebar-item flex items-center px-3 py-2 text-sm rounded-md">
+                    <i class="fas fa-exclamation-triangle w-5 text-center mr-2"></i>
+                    <span>站点报警</span>
+                </a>
+                
+                <a href="#" class="sidebar-item flex items-center px-3 py-2 text-sm rounded-md">
+                    <i class="fas fa-file-alt w-5 text-center mr-2"></i>
+                    <span>分析报表</span>
+                </a>
+                
+                <a href="#" class="sidebar-item flex items-center px-3 py-2 text-sm rounded-md">
+                    <i class="fas fa-desktop w-5 text-center mr-2"></i>
+                    <span>数据监控</span>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 主要内容区域 -->
+    <main class="ml-60 pt-16 bg-gray-50 min-h-screen">
+        <div class="p-6 dashboard-content dashboard-content-scrollable" style="height: calc(100vh - 64px); overflow-y: auto;">
+            <!-- 页面标题 -->
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-xl font-semibold text-gray-800">PCS管理</h1>
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-500">最后更新: 2023-08-15 14:32:45</span>
+                    <button class="p-1 rounded-full hover:bg-gray-200 transition-colors">
+                        <i class="fas fa-sync-alt text-gray-600 text-sm"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- PCS状态概览 -->
+            <div class="glass-card p-4">
+                <h2 class="card-title">PCS状态概览</h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-3">
+                    <!-- 系统状态指标卡片 -->
+                    <div class="bg-blue-50 bg-opacity-50 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs text-gray-500">系统状态</div>
+                            <i class="fas fa-check-circle text-blue-500 text-sm"></i>
+                        </div>
+                        <div class="text-lg font-semibold mt-1">正常运行</div>
+                        <div class="text-xs text-gray-500 mt-1">运行时间: 1,245小时</div>
+                    </div>
+                    
+                    <div class="bg-green-50 bg-opacity-50 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs text-gray-500">总功率</div>
+                            <i class="fas fa-bolt text-green-500 text-sm"></i>
+                        </div>
+                        <div class="text-lg font-semibold mt-1">3.2 MW</div>
+                        <div class="flex items-center text-xs text-gray-500 mt-2">
+                            <span>额定功率: 5 MW</span>
+                            <span class="ml-1 text-green-500">(64%)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-yellow-50 bg-opacity-50 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs text-gray-500">转换效率</div>
+                            <i class="fas fa-exchange-alt text-yellow-500 text-sm"></i>
+                        </div>
+                        <div class="text-lg font-semibold mt-1">96.8%</div>
+                        <div class="flex items-center text-xs text-gray-500 mt-2">
+                            <span>设计效率: 98.0%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-purple-50 bg-opacity-50 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs text-gray-500">温度</div>
+                            <i class="fas fa-temperature-half text-purple-500 text-sm"></i>
+                        </div>
+                        <div class="text-lg font-semibold mt-1">42.5°C</div>
+                        <div class="flex items-center text-xs text-gray-500 mt-2">
+                            <span>最高允许: 65°C</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PCS设备选择器 -->
+            <div class="glass-card p-4 mt-4">
+                <h2 class="card-title">PCS设备</h2>
+                <div class="flex items-center space-x-4 mt-2">
+                    <div class="w-1/3">
+                        <label class="block text-xs text-gray-500 mb-1">选择PCS</label>
+                        <select id="pcs-select-dropdown" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option selected>PCS #01</option>
+                        </select>
+                    </div> 
+                </div>
+            </div>
+            
+            <!-- PCS详细信息卡片 -->
+            <div class="glass-card p-4 mt-4">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h2 class="card-title">PCS #01 详细信息</h2>
+                        <div class="flex items-center mt-1">
+                            <span class="status-indicator status-normal"></span>
+                            <span class="text-sm text-gray-600">正常运行</span>
+                        </div>
+                    </div>
+                    <!--<div class="flex items-center space-x-2">
+                        <button class="text-xs px-3 py-1.5 rounded bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors">
+                            <i class="fas fa-history mr-1"></i>历史数据
+                        </button>
+                        <button class="text-xs px-3 py-1.5 rounded bg-green-50 text-green-500 hover:bg-green-100 transition-colors">
+                            <i class="fas fa-cog mr-1"></i>参数设置
+                        </button>
+                    </div>-->
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                        <div class="text-xs text-gray-500">功率</div>
+                        <div class="text-lg font-medium">750 kW</div>
+                        <div class="progress-bar mt-1">
+                            <div class="progress-fill bg-blue-500" style="width: 75%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500">效率</div>
+                        <div class="text-lg font-medium">97.0%</div>
+                        <div class="progress-bar mt-1">
+                            <div class="progress-fill bg-green-500" style="width: 97%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500">温度</div>
+                        <div class="text-lg font-medium">40.8°C</div>
+                        <div class="progress-bar mt-1">
+                            <div class="progress-fill bg-yellow-500" style="width: 68%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500">运行模式</div>
+                        <div class="text-lg font-medium">放电</div>
+                        <div class="text-xs text-gray-500 mt-1">已运行: 4.5小时</div>
+                    </div>
+                </div>
+                
+                <div class="card-divider"></div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
+                    <div>
+                        <div class="text-xs text-gray-500">输入电压</div>
+                        <div class="text-sm font-medium">380V</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500">输出电压</div>
+                        <div class="text-sm font-medium">220V</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500">频率</div>
+                        <div class="text-sm font-medium">50Hz</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500">功率因数</div>
+                        <div class="text-sm font-medium">0.98</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 功率曲线图 -->
+            <div class="glass-card p-4 mt-4">
+                <h2 class="card-title">功率曲线</h2>
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-xs text-gray-500">显示最近24小时功率变化</div>
+                    <div class="flex items-center space-x-2">
+                        <button class="text-xs px-2 py-1 rounded bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors">24小时</button>
+                        <button class="text-xs px-2 py-1 rounded text-gray-500 hover:bg-gray-100 transition-colors">7天</button>
+                        <button class="text-xs px-2 py-1 rounded text-gray-500 hover:bg-gray-100 transition-colors">30天</button>
+                    </div>
+                </div>
+                <div class="chart-container" style="height: 240px;">
+                    <canvas id="powerChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- 效率分析卡片 -->
+            <div class="glass-card p-4 mt-4">
+                <h2 class="card-title">PCS效率分析</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                    <div>
+                        <div class="chart-container" style="height: 200px;">
+                            <canvas id="efficiencyChart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="bg-blue-50 bg-opacity-50 rounded-lg p-3 mb-3">
+                            <div class="flex items-center justify-between">
+                                <div class="text-xs text-gray-500">平均效率</div>
+                                <i class="fas fa-tachometer-alt text-blue-500 text-sm"></i>
+                            </div>
+                            <div class="text-lg font-semibold mt-1">96.8%</div>
+                            <div class="text-xs text-gray-500 mt-1">较上月 <span class="text-green-500">+0.2%</span></div>
+                        </div>
+                        
+                        <div class="bg-green-50 bg-opacity-50 rounded-lg p-3">
+                            <div class="flex items-center justify-between">
+                                <div class="text-xs text-gray-500">最佳效率PCS</div>
+                                <i class="fas fa-award text-green-500 text-sm"></i>
+                            </div>
+                            <div class="text-lg font-semibold mt-1">PCS #02 (97.8%)</div>
+                            <div class="text-xs text-gray-500 mt-1">运行时间: 4,328小时</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 告警信息卡片 -->
+            <!--<div class="glass-card p-4 mt-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="card-title">PCS告警信息</h2>
+                    <a href="#" class="text-xs text-blue-500 hover:text-blue-700 transition-colors">查看全部</a>
+                </div>
+                <div class="overflow-hidden rounded-lg mt-2">
+                    <table class="min-w-full">
+                        <thead class="bg-gray-50 bg-opacity-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">告警时间</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">告警类型</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">设备位置</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">告警级别</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">状态</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 bg-white bg-opacity-50">
+                            <tr>
+                                <td class="px-4 py-3 text-xs text-gray-800">2023-08-15 08:32:15</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">通信异常</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">PCS #05</td>
+                                <td class="px-4 py-3 text-xs">
+                                    <span class="px-2 py-1 rounded-full bg-red-100 text-red-800 text-xs">严重</span>
+                                </td>
+                                <td class="px-4 py-3 text-xs text-gray-800">未处理</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 text-xs text-gray-800">2023-08-14 16:45:33</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">充电电流异常</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">PCS #02</td>
+                                <td class="px-4 py-3 text-xs">
+                                    <span class="px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-xs">提示</span>
+                                </td>
+                                <td class="px-4 py-3 text-xs text-gray-800">已处理</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 text-xs text-gray-800">2023-08-13 11:28:42</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">温度过高</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">PCS #06</td>
+                                <td class="px-4 py-3 text-xs">
+                                    <span class="px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 text-xs">警告</span>
+                                </td>
+                                <td class="px-4 py-3 text-xs text-gray-800">已处理</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 text-xs text-gray-800">2023-08-12 09:15:07</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">电网电压波动</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">PCS #01</td>
+                                <td class="px-4 py-3 text-xs">
+                                    <span class="px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 text-xs">警告</span>
+                                </td>
+                                <td class="px-4 py-3 text-xs text-gray-800">已处理</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>-->
+    </main>
+    
+    <script>
+        // 确保DOM完全加载后再绑定事件
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('[DEBUG] DOMContentLoaded event fired. Starting script execution...');
+            
+            try {
+                // 电池管理菜单展开/折叠
+                console.log('[DEBUG] Setting up battery management menu...');
+                const batteryManagement = document.getElementById('battery-management');
+                const batterySubmenu = document.getElementById('battery-submenu');
+                const batteryChevron = document.getElementById('battery-chevron');
+                
+                if (batteryManagement && batterySubmenu && batteryChevron) {
+                    console.log('[DEBUG] Found battery management elements. Adding click listener.');
+                    batteryManagement.addEventListener('click', function(e) {
+                        console.log('电池管理菜单被点击');
+                        batterySubmenu.classList.toggle('open');
+                        batteryChevron.classList.toggle('rotate-180');
+                    });
+                } else {
+                    console.error('[DEBUG] Failed to find all battery management elements:', {
+                        batteryManagement: !!batteryManagement,
+                        batterySubmenu: !!batterySubmenu,
+                        batteryChevron: !!batteryChevron
+                    });
+                }
+                
+                // 移动端菜单按钮事件
+                console.log('[DEBUG] Setting up mobile menu button...');
+                const mobileMenuButton = document.getElementById('mobile-menu-button');
+                const mobileMenu = document.getElementById('mobile-menu');
+                
+                if (mobileMenuButton && mobileMenu) {
+                    console.log('[DEBUG] Found mobile menu elements. Adding click listener.');
+                    mobileMenuButton.addEventListener('click', function() {
+                        console.log('移动端菜单按钮被点击');
+                        mobileMenu.classList.toggle('hidden');
+                    });
+                } else {
+                    console.error('[DEBUG] Failed to find all mobile menu elements:', {
+                        mobileMenuButton: !!mobileMenuButton,
+                        mobileMenu: !!mobileMenu
+                    });
+                }
+                
+                // 为所有按钮和链接添加点击事件日志 (确保不影响其他逻辑)
+                console.log('[DEBUG] Setting up general click logging...');
+                const clickables = document.querySelectorAll('a, button, .sidebar-item');
+                console.log(`[DEBUG] Found ${clickables.length} clickable elements for logging.`);
+                clickables.forEach((element, index) => {
+                    element.removeEventListener('click', logClickEvent); // 避免重复添加
+                    element.addEventListener('click', logClickEvent);
+                    // console.log(`[DEBUG] Added log listener to element ${index}:`, element.tagName, element.id || element.className);
+                });
+                
+                // 强制激活所有子菜单项的点击处理 (检查是否必要或引起冲突)
+                console.log('[DEBUG] Forcing pointer events on sidebar items...');
+                const submenuItems = document.querySelectorAll('.sidebar-item');
+                submenuItems.forEach(item => {
+                    item.style.pointerEvents = 'auto';
+                    item.style.cursor = 'pointer';
+                });
+                
+                // PCS选择下拉框事件处理 (使用更具体的选择器)
+                console.log('[DEBUG] Setting up PCS select dropdown...');
+                // const pcsSelect = document.querySelector('main select'); // 更具体的选择器
+                // 或者直接用 ID (如果可以添加)
+                // 假设下拉框在 PCS 设备区域内
+                const pcsDeviceSection = document.getElementById('pcs-select-dropdown'); 
+                if (pcsDeviceSection) {
+                    console.log('[DEBUG] Found PCS select dropdown. Adding change listener.', pcsDeviceSection);
+                    pcsDeviceSection.addEventListener('change', function() {
+                        const selectedPCS = this.value;
+                        console.log('选择了PCS:', selectedPCS);
+                        updatePCSDetails(selectedPCS);
+                    });
+                } else {
+                    console.error('[DEBUG] Failed to find PCS select dropdown using selector ".glass-card .w-1/3 select".');
+                }
+                
+                // 确保页面可以正常滚动
+                console.log('[DEBUG] Setting up content scrolling...');
+                const contentScrollable = document.querySelector('.dashboard-content-scrollable');
+                if (contentScrollable) {
+                    console.log('[DEBUG] Found scrollable content area. Applying styles and adding scroll listener.');
+                    // 确保内容区域高度正确，并启用滚动
+                    contentScrollable.style.height = 'calc(100vh - 64px)';
+                    contentScrollable.style.overflowY = 'auto';
+                    contentScrollable.style.overflowX = 'hidden'; // 明确禁止水平滚动
+                    console.log('[DEBUG] Scrollable styles applied:', contentScrollable.style.height, contentScrollable.style.overflowY, contentScrollable.style.overflowX);
+                    
+                    // 添加滚动事件监听
+                    contentScrollable.addEventListener('scroll', function() {
+                        console.log('内容区域滚动', {
+                            scrollTop: this.scrollTop,
+                            scrollHeight: this.scrollHeight,
+                            clientHeight: this.clientHeight
+                        });
+                    });
+                     console.log('[DEBUG] Scroll listener added.');
+                    
+                    // 短暂延迟后检查滚动属性是否生效
+                    setTimeout(() => {
+                        console.log('[DEBUG] Checking scroll properties after delay:', {
+                             scrollHeight: contentScrollable.scrollHeight,
+                             clientHeight: contentScrollable.clientHeight,
+                             computedHeight: window.getComputedStyle(contentScrollable).height,
+                             computedOverflowY: window.getComputedStyle(contentScrollable).overflowY
+                        });
+                         // 如果内容不足以滚动，scrollHeight <= clientHeight
+                         if (contentScrollable.scrollHeight > contentScrollable.clientHeight) {
+                             console.log('[DEBUG] Content should be scrollable.');
+                         } else {
+                              console.warn('[DEBUG] Content might not be tall enough to scroll.');
+                         }
+                    }, 1000);
+                   
+                } else {
+                    console.error('[DEBUG] Failed to find scrollable content area using selector ".dashboard-content-scrollable".');
+                }
+                
+                // 初始化图表
+                console.log('[DEBUG] Checking for Chart.js and initializing charts...');
+                if (typeof Chart !== 'undefined') {
+                    console.log('[DEBUG] Chart.js found. Scheduling chart initialization.');
+                    setTimeout(initCharts, 500); // 稍增加延迟确保DOM和样式应用
+                } else {
+                    console.error('[DEBUG] Chart.js not loaded. Cannot initialize charts.');
+                }
+            } catch (error) {
+                console.error('[DEBUG] Error during DOMContentLoaded setup:', error);
+            }
+             console.log('[DEBUG] DOMContentLoaded script execution finished.');
+        });
+        
+        // 点击事件处理函数
+        function logClickEvent(e) {
+            const element = this;
+            console.log('元素被点击:', {
+                tagName: element.tagName,
+                id: element.id,
+                className: element.className,
+                text: element.textContent.trim().substring(0, 50)
+            });
+            // 注意：如果点击的是链接 (<a>) 且有 href="#", 可能需要 e.preventDefault() 阻止页面跳转
+            // if (element.tagName === 'A' && element.getAttribute('href') === '#') {
+            //     e.preventDefault();
+            // }
+        }
+        
+        // 更新PCS详细信息
+        function updatePCSDetails(pcsName) {
+            try {
+                console.log(`[DEBUG] Updating details for ${pcsName}...`);
+                
+                // 模拟数据更新
+                const detailsTitle = document.querySelector('#pcs-details-title'); // 建议为详细信息标题添加ID
+                if (detailsTitle) {
+                    detailsTitle.textContent = `${pcsName} 详细信息`;
+                    console.log('[DEBUG] Updated PCS details title.');
+                } else {
+                    // 回退到之前的查找方式，如果还没加ID
+                    const fallbackTitle = Array.from(document.querySelectorAll('.glass-card .card-title')).find(el => el.textContent.includes('PCS #'));
+                    if(fallbackTitle){
+                        fallbackTitle.textContent = `${pcsName} 详细信息`;
+                         console.log('[DEBUG] Updated PCS details title (fallback method).');
+                    } else {
+                         console.warn('[DEBUG] Could not find PCS details title element to update.');
+                    }
+                }
+                
+                // 在这里添加更多更新逻辑...
+                
+                console.log(`[DEBUG] Finished updating details for ${pcsName}.`);
+            } catch (error) {
+                console.error('[DEBUG] Error updating PCS details:', error);
+            }
+        }
+        
+        // 初始化图表
+        function initCharts() {
+            try {
+                console.log('[DEBUG] Initializing charts...');
+                
+                // 功率图表
+                const powerChartElement = document.getElementById('powerChart');
+                if (powerChartElement) {
+                    console.log('[DEBUG] Found power chart canvas.');
+                    const powerCtx = powerChartElement.getContext('2d');
+                    if (powerCtx) {
+                        // 销毁可能存在的旧图表实例
+                        if (window.powerChartInstance) { window.powerChartInstance.destroy(); }
+                        window.powerChartInstance = new Chart(powerCtx, {
+                            type: 'line',
+                            data: {
+                                labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+                                datasets: [{
+                                    label: '功率输出',
+                                    data: [200, 350, 500, 450, 380, 250].map(d => d + Math.random() * 10), // 添加随机性以便观察变化
+                                    borderColor: '#10B981',
+                                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                    tension: 0.4,
+                                    fill: true
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    }
+                                }
+                            }
+                        });
+                        console.log('[DEBUG] Power chart initialized/updated.');
+                    } else {
+                        console.error('[DEBUG] Failed to get 2D context for power chart.');
+                    }
+                } else {
+                    console.error('[DEBUG] Failed to find power chart canvas element.');
+                }
+                
+                // 效率图表
+                const efficiencyChartElement = document.getElementById('efficiencyChart');
+                if (efficiencyChartElement) {
+                    console.log('[DEBUG] Found efficiency chart canvas.');
+                    const efficiencyCtx = efficiencyChartElement.getContext('2d');
+                    if (efficiencyCtx) {
+                         // 销毁可能存在的旧图表实例
+                         if (window.efficiencyChartInstance) { window.efficiencyChartInstance.destroy(); }
+                         window.efficiencyChartInstance = new Chart(efficiencyCtx, {
+                            type: 'line',
+                            data: {
+                                labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+                                datasets: [{
+                                    label: 'PCS效率',
+                                    data: [96, 97, 98, 99, 97, 98].map(d => d + Math.random() * 0.5), // 添加随机性
+                                    borderColor: '#4F46E5',
+                                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                                    tension: 0.4,
+                                    fill: true
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        min: 80,
+                                        max: 100
+                                    }
+                                }
+                            }
+                        });
+                        console.log('[DEBUG] Efficiency chart initialized/updated.');
+                    } else {
+                        console.error('[DEBUG] Failed to get 2D context for efficiency chart.');
+                    }
+                } else {
+                    console.error('[DEBUG] Failed to find efficiency chart canvas element.');
+                }
+            } catch (error) {
+                console.error('[DEBUG] Error initializing charts:', error);
+            }
+        }
+        
+        // 页面加载完成后立即检查 (DOMContentLoaded 应该足够，但保留以防万一)
+        // if (document.readyState === 'complete') {
+        //     console.log('[DEBUG] Document readyState is complete. Running immediate checks...');
+        //     try {
+        //         // ... (可以考虑移除这部分，因为 DOMContentLoaded 应该已经处理了)
+        //     } catch (error) {
+        //         console.error('[DEBUG] Error during immediate readyState check:', error);
+        //     }
+        // }
+        
+        // 建议: 为PCS详细信息标题添加ID以便更可靠地更新
+        // 例如: <h2 id="pcs-details-title" class="card-title">PCS #01 详细信息</h2>
+    </script>
+</body>
+</html>

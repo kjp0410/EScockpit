@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电池包管理 - 分布式储能系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.staticfile.org/Chart.js/4.0.1/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        .glass-card {
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 12px;
+        }
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        .sidebar-item:hover:not(.active) {
+            background-color: rgba(243, 244, 246, 0.8);
+        }
+        .sidebar-item.active {
+            background-color: rgba(219, 234, 254, 0.5);
+            color: #3b82f6;
+            font-weight: 500;
+        }
+        .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .submenu.open {
+            max-height: 200px;
+        }
+        .nav-item {
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .nav-item.active {
+            color: #3b82f6;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+        .card-divider {
+            height: 1px;
+            background-color: rgba(229, 231, 235, 0.5);
+            margin: 12px 0;
+        }
+        .info-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background-color: rgba(219, 234, 254, 0.5);
+            color: #3b82f6;
+        }
+        
+        /* 自定义滚动条 */
+        .content-scrollable::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .content-scrollable::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .content-scrollable::-webkit-scrollbar-thumb {
+            background-color: rgba(203, 213, 225, 0.5);
+            border-radius: 20px;
+        }
+        
+        /* 电池包页面特定样式 */
+        .progress-bar {
+            height: 6px;
+            background-color: rgba(229, 231, 235, 0.5);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        
+        .status-normal {
+            background-color: #10b981;
+        }
+        
+        .status-warning {
+            background-color: #f59e0b;
+        }
+        
+        .status-alert {
+            background-color: #ef4444;
+        }
+        
+        .battery-cell {
+            height: 24px;
+            border-radius: 4px;
+            margin: 2px;
+            position: relative;
+        }
+        
+        .battery-cell-normal {
+            background-color: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.5);
+        }
+        
+        .battery-cell-warning {
+            background-color: rgba(245, 158, 11, 0.2);
+            border: 1px solid rgba(245, 158, 11, 0.5);
+        }
+        
+        .battery-cell-alert {
+            background-color: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+        
+        .battery-cell-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 10px;
+            font-weight: 500;
+        }
+        
+        .dashboard-content-scrollable {
+            overflow-y: auto;
+            max-height: calc(100vh - 64px);
+            height: 100%;
+            padding-bottom: 20px;
+        }
+        
+        /* 确保html和body可以滚动 */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        /* 主内容区调整 */
+        main {
+            height: 100vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 内容区域调整 */
+        .flex-1 {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 右侧内容区调整 */
+        .ml-60 {
+            margin-left: 15rem;
+            height: calc(100vh - 64px);
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 顶部导航栏 -->
+    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-10 h-16">
+        <div class="flex items-center justify-between px-6 h-full">
+            <div class="flex items-center">
+                <div class="text-xl font-semibold text-gray-800">分布式储能系统</div>
+                <nav class="ml-10">
+                    <ul class="flex space-x-8">
+                        <li class="nav-item">
+                            <a href="#" class="text-gray-600 hover:text-gray-900 text-sm">驾驶舱</a>
+                        </li>
+                        <li class="nav-item active">
+                            <a href="#" class="text-sm">站点列表</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="text-gray-600 hover:text-gray-900 text-sm">告警中心</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="text-gray-600 hover:text-gray-900 text-sm">管理</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button class="text-gray-600 hover:text-gray-900">
+                    <i class="fas fa-bell"></i>
+                </button>
+                <button class="text-gray-600 hover:text-gray-900">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="flex pt-16">
+        <!-- 左侧导航栏 -->
+        <aside class="w-60 bg-white shadow-sm fixed left-0 top-16 bottom-0 overflow-y-auto">
+            <div class="p-4">
+                <div class="text-sm font-medium text-gray-500 mb-2">北京朝阳储能电站</div>
+                <nav>
+                    <ul class="space-y-1">
+                        <li>
+                            <a href="#" class="sidebar-item flex items-center px-3 py-2 rounded-md text-sm">
+                                <i class="fas fa-home w-5"></i>
+                                <span>站点概况</span>
+                            </a>
+                        </li>
+                        <li>
+                            <div id="battery-management" class="sidebar-item active flex items-center justify-between px-3 py-2 rounded-md text-sm cursor-pointer">
+                                <div class="flex items-center">
+                                    <i class="fas fa-battery-three-quarters w-5"></i>
+                                    <span>电池管理</span>
+                                </div>
+                                <i id="battery-chevron" class="fas fa-chevron-down transform rotate-180 text-xs transition-transform"></i>
+                            </div>
+                            <ul id="battery-submenu" class="submenu open pl-8 space-y-1">
+                                <li>
+                                    <a href="#" class="sidebar-item flex items-center px-3 py-2 rounded-md text-sm">
+                                        <span>PCS</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="#" class="sidebar-item active flex items-center px-3 py-2 rounded-md text-sm">
+                                        <span>电池包</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li>
+                            <a href="#" class="sidebar-item flex items-center px-3 py-2 rounded-md text-sm">
+                                <i class="fas fa-chart-line w-5"></i>
+                                <span>收益报表</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="sidebar-item flex items-center px-3 py-2 rounded-md text-sm">
+                                <i class="fas fa-calendar w-5"></i>
+                                <span>业务调度日历</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="sidebar-item flex items-center px-3 py-2 rounded-md text-sm">
+                                <i class="fas fa-bolt w-5"></i>
+                                <span>充放电策略</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="sidebar-item flex items-center px-3 py-2 rounded-md text-sm">
+                                <i class="fas fa-exclamation-triangle w-5"></i>
+                                <span>站点报警</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="sidebar-item flex items-center px-3 py-2 rounded-md text-sm">
+                                <i class="fas fa-file-alt w-5"></i>
+                                <span>分析报表</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="sidebar-item flex items-center px-3 py-2 rounded-md text-sm">
+                                <i class="fas fa-desktop w-5"></i>
+                                <span>数据监控</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- 右侧内容区 -->
+        <div class="ml-60 flex-1 p-6 dashboard-content dashboard-content-scrollable">
+            <!-- 电池包详情选择器 -->
+            <div class="glass-card p-4 mt-4">
+                <h2 class="card-title">电池包详情</h2>
+                <div class="flex items-center space-x-4 mt-2">
+                    <div class="w-1/2">
+                        <label class="block text-xs text-gray-500 mb-1">电池柜</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option>电池柜 #01</option>
+                            <option>电池柜 #02</option>
+                            <option>电池柜 #03</option>
+                            <option selected>电池柜 #04</option>
+                            <option>电池柜 #05</option>
+                            <option>电池柜 #06</option>
+                        </select>
+                    </div>
+                    <div class="w-1/2">
+                        <label class="block text-xs text-gray-500 mb-1">电池包</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option>电池包 #1</option>
+                            <option>电池包 #2</option>
+                            <option>电池包 #3</option>
+                            <option>电池包 #4</option>
+                            <option selected>电池包 #5</option>
+                            <option>电池包 #6</option>
+                            <option>电池包 #7</option>
+                            <option>电池包 #8</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 电池包状态概览 -->
+            <div class="glass-card p-4 mt-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="card-title">电池包 #5 状态概览</h2>
+                    <div class="flex items-center">
+                        <span class="status-indicator status-warning"></span>
+                        <span class="text-xs text-yellow-600">SOC不均衡</span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                    <div class="bg-blue-50 bg-opacity-50 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs text-gray-500">SOC</div>
+                            <i class="fas fa-battery-half text-blue-500 text-sm"></i>
+                        </div>
+                        <div class="text-lg font-semibold mt-1">72%</div>
+                        <div class="progress-bar mt-2">
+                            <div class="progress-fill bg-blue-500" style="width: 72%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-yellow-50 bg-opacity-50 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs text-gray-500">SOH</div>
+                            <i class="fas fa-heartbeat text-yellow-500 text-sm"></i>
+                        </div>
+                        <div class="text-lg font-semibold mt-1">91%</div>
+                        <div class="progress-bar mt-2">
+                            <div class="progress-fill bg-yellow-500" style="width: 91%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-green-50 bg-opacity-50 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs text-gray-500">温度</div>
+                            <i class="fas fa-temperature-half text-green-500 text-sm"></i>
+                        </div>
+                        <div class="text-lg font-semibold mt-1">26.5°C</div>
+                        <div class="flex items-center text-xs text-gray-500 mt-2">
+                            <span>最低: 25.8°C</span>
+                            <span class="mx-2">|</span>
+                            <span>最高: 27.2°C</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                    <div class="bg-purple-50 bg-opacity-50 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs text-gray-500">电压</div>
+                            <i class="fas fa-bolt text-purple-500 text-sm"></i>
+                        </div>
+                        <div class="text-lg font-semibold mt-1">3.20V</div>
+                        <div class="flex items-center text-xs text-gray-500 mt-2">
+                            <span>单体最低: 3.18V</span>
+                            <span class="mx-2">|</span>
+                            <span>单体最高: 3.22V</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-50 bg-opacity-50 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs text-gray-500">内阻</div>
+                            <i class="fas fa-plug text-indigo-500 text-sm"></i>
+                        </div>
+                        <div class="text-lg font-semibold mt-1">0.85mΩ</div>
+                        <div class="flex items-center text-xs text-gray-500 mt-2">
+                            <span>单体最低: 0.82mΩ</span>
+                            <span class="mx-2">|</span>
+                            <span>单体最高: 0.91mΩ</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-red-50 bg-opacity-50 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs text-gray-500">循环次数</div>
+                            <i class="fas fa-sync text-red-500 text-sm"></i>
+                        </div>
+                        <div class="text-lg font-semibold mt-1">328次</div>
+                        <div class="text-xs text-gray-500 mt-2">
+                            <span>预计剩余寿命: 约1,672次</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 电池单体状态可视化 -->
+            <div class="glass-card p-4 mt-4">
+                <h2 class="card-title">电池单体状态可视化</h2>
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-xs text-gray-500">显示16个单体电池电压分布</div>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center">
+                            <span class="inline-block w-3 h-3 bg-green-500 rounded-sm mr-1"></span>
+                            <span class="text-xs text-gray-500">正常</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="inline-block w-3 h-3 bg-yellow-500 rounded-sm mr-1"></span>
+                            <span class="text-xs text-gray-500">最低电压</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="inline-block w-3 h-3 bg-red-500 rounded-sm mr-1"></span>
+                            <span class="text-xs text-gray-500">最高电压</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 电池单体可视化网格 -->
+                <div class="grid grid-cols-8 gap-2 mt-4">
+                    <!-- 第一行 -->
+                    <div class="battery-cell-container">
+                        <div class="battery-cell bg-red-500"></div>
+                        <div class="text-xs text-center mt-1">3.30V</div>
+                    </div>
+                    <div class="battery-cell-container">
+                        <div class="battery-cell bg-green-500"></div>
+                        <div class="text-xs text-center mt-1">3.20V</div>
+                    </div>
+                    <div class="battery-cell-container">
+                        <div class="battery-cell bg-green-500"></div>
+                        <div class="text-xs text-center mt-1">3.22V</div>
+                    </div>
+                    <div class="battery-cell-container">
+                        <div class="battery-cell bg-green-500"></div>
+                        <div class="text-xs text-center mt-1">3.21V</div>
+                    </div>
+                    <div class="battery-cell-container">
+                        <div class="battery-cell bg-green-500"></div>
+                        <div class="text-xs text-center mt-1">3.20V</div>
+                    </div>
+                    <div class="battery-cell-container">
+                        <div class="battery-cell bg-green-500"></div>
+                        <div class="text-xs text-center mt-1">3.19V</div>
+                    </div>
+                    <div class="battery-cell-container">
+                        <div class="battery-cell bg-green-500"></div>
+                        <div class="text-xs text-center mt-1">3.20V</div>
+                    </div>
+                    <div class="battery-cell-container">
+                        <div class="battery-cell bg-green-500"></div>
+                        <div class="text-xs text-center mt-1">3.21V</div>
+                    </div>
+                    
+                    <!-- 第二行 -->
+                    <div class="battery-cell-container">
+                        <div class="battery-cell bg-green-500"></div>
+                        <div class="text-xs text-center mt-1">3.19V</div>
+                    </div>
+                    <div class="battery-cell-container">
+                        <div class="battery-cell bg-yellow-500"></div>
+                        <div class="text-xs text-center mt-1">3.18V</div>
+                    </div>
+                    <div class="battery-cell-container">
+                        <div class="battery-cell bg-green-500"></div>
+                        <div class="text-xs text-center mt-1">3.20V</div>
+                    </div>
+                    <div class="battery-cell-container">
+                        <div class="battery-cell bg-green-500"></div>
+                        <div class="text-xs text-center mt-1">3.19V</div>
+                    </div>
+                    <div class="battery-cell-container">
+                        <div class="battery-cell bg-green-500"></div>
+                        <div class="text-xs text-center mt-1">3.21V</div>
+                    </div>
+                    <div class="battery-cell-container">
+                        <div class="battery-cell bg-green-500"></div>
+                        <div class="text-xs text-center mt-1">3.20V</div>
+                    </div>
+                    <div class="battery-cell-container">
+                        <div class="battery-cell bg-yellow-500"></div>
+                        <div class="text-xs text-center mt-1">3.18V</div>
+                    </div>
+                    <div class="battery-cell-container">
+                        <div class="battery-cell bg-green-500"></div>
+                        <div class="text-xs text-center mt-1">3.19V</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 电池包历史数据图表 -->
+            <div class="glass-card p-4 mt-4">
+                <h2 class="card-title">电池包历史数据</h2>
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-xs text-gray-500">显示最近30天数据变化</div>
+                    <div class="flex items-center space-x-2">
+                        <button class="text-xs px-2 py-1 rounded bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors">30天</button>
+                        <button class="text-xs px-2 py-1 rounded text-gray-500 hover:bg-gray-100 transition-colors">90天</button>
+                        <button class="text-xs px-2 py-1 rounded text-gray-500 hover:bg-gray-100 transition-colors">1年</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <div class="text-sm font-medium mb-2">SOC/SOH趋势</div>
+                        <div class="chart-container" style="height: 200px;">
+                            <canvas id="socSohChart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium mb-2">电压/温度趋势</div>
+                        <div class="chart-container" style="height: 200px;">
+                            <canvas id="voltTempChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 电池包均衡记录 -->
+            <div class="glass-card p-4 mt-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="card-title">电池均衡记录</h2>
+                    <a href="#" class="text-xs text-blue-500 hover:text-blue-700 transition-colors">查看全部</a>
+                </div>
+                <div class="overflow-hidden rounded-lg mt-2">
+                    <table class="min-w-full">
+                        <thead class="bg-gray-50 bg-opacity-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">均衡时间</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">均衡类型</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">均衡单体</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">均衡前电压差</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">均衡后电压差</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">状态</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 bg-white bg-opacity-50">
+                            <tr>
+                                <td class="px-4 py-3 text-xs text-gray-800">2023-08-15 02:15:33</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">自动均衡</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">2, 7, 10</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">42mV</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">12mV</td>
+                                <td class="px-4 py-3 text-xs">
+                                    <span class="px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs">完成</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 text-xs text-gray-800">2023-08-10 23:42:18</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">手动均衡</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">全部单体</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">38mV</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">8mV</td>
+                                <td class="px-4 py-3 text-xs">
+                                    <span class="px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs">完成</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 text-xs text-gray-800">2023-08-05 14:28:42</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">自动均衡</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">5, 12, 14</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">35mV</td>
+                                <td class="px-4 py-3 text-xs text-gray-800">10mV</td>
+                                <td class="px-4 py-3 text-xs">
+                                    <span class="px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs">完成</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    // 侧边栏展开/折叠功能
+    document.addEventListener('DOMContentLoaded', function() {
+        // 电池管理菜单默认展开
+        document.getElementById('battery-submenu').classList.add('open');
+        document.getElementById('battery-chevron').classList.add('transform', 'rotate-180');
+        
+        // 添加点击事件
+        document.getElementById('battery-management').addEventListener('click', function() {
+            const submenu = document.getElementById('battery-submenu');
+            const chevron = document.getElementById('battery-chevron');
+            
+            submenu.classList.toggle('open');
+            chevron.classList.toggle('rotate-180');
+        });
+        
+        // 初始化图表
+        initCharts();
+    });
+    
+    // 初始化图表
+    function initCharts() {
+        // SOC/SOH趋势图
+        const socSohCtx = document.getElementById('socSohChart').getContext('2d');
+        const socSohChart = new Chart(socSohCtx, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 30}, (_, i) => `${i+1}日`),
+                datasets: [
+                    {
+                        label: 'SOC (%)',
+                        data: [75, 72, 68, 70, 73, 78, 80, 82, 79, 76, 74, 72, 70, 68, 65, 63, 60, 65, 68, 70, 72, 75, 78, 80, 82, 80, 78, 75, 73, 72],
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'SOH (%)',
+                        data: [92, 92, 91.9, 91.9, 91.8, 91.8, 91.7, 91.7, 91.6, 91.6, 91.5, 91.5, 91.4, 91.4, 91.3, 91.3, 91.2, 91.2, 91.1, 91.1, 91, 91, 91, 91, 91, 91, 91, 91, 91, 91],
+                        borderColor: 'rgba(245, 158, 11, 1)',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            boxWidth: 12,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        min: 50,
+                        max: 100,
+                        ticks: {
+                            font: {
+                                size: 10
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'SOC (%)',
+                            font: {
+                                size: 10
+                            }
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        min: 90,
+                        max: 100,
+                        grid: {
+                            drawOnChartArea: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 10
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'SOH (%)',
+                            font: {
+                                size: 10
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                size: 10
+                            },
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 10
+                        }
+                    }
+                }
+            }
+        });
+        
+        // 电压/温度趋势图
+        const voltTempCtx = document.getElementById('voltTempChart').getContext('2d');
+        const voltTempChart = new Chart(voltTempCtx, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 30}, (_, i) => `${i+1}日`),
+                datasets: [
+                    {
+                        label: '电压 (V)',
+                        data: [51.4, 51.3, 51.3, 51.2, 51.2, 51.3, 51.3, 51.4, 51.4, 51.3, 51.3, 51.2, 51.2, 51.1, 51.1, 51.0, 51.0, 51.1, 51.1, 51.2, 51.2, 51.3, 51.3, 51.4, 51.4, 51.3, 51.3, 51.2, 51.2, 51.2],
+                        borderColor: 'rgba(124, 58, 237, 1)',
+                        backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: '温度 (°C)',
+                        data: [25.2, 25.4, 25.6, 25.8, 26.0, 26.2, 26.4, 26.6, 26.8, 27.0, 26.8, 26.6, 26.4, 26.2, 26.0, 25.8, 25.6, 25.4, 25.6, 25.8, 26.0, 26.2, 26.4, 26.6, 26.8, 27.0, 26.8, 26.6, 26.4, 26.5],
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            boxWidth: 12,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        min: 50,
+                        max: 52,
+                        ticks: {
+                            font: {
+                                size: 10
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: '电压 (V)',
+                            font: {
+                                size: 10
+                            }
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        min: 20,
+                        max: 30,
+                        grid: {
+                            drawOnChartArea: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 10
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: '温度 (°C)',
+                            font: {
+                                size: 10
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                size: 10
+                            },
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 10
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // 响应式布局调整
+    function adjustLayout() {
+        const width = window.innerWidth;
+        const dashboardContent = document.querySelector('.dashboard-content');
+        
+        if (width < 1600) {
+            dashboardContent.classList.add('dashboard-content-scrollable');
+        } else {
+            dashboardContent.classList.remove('dashboard-content-scrollable');
+        }
+    }
+    
+    // 页面加载和窗口大小变化时调整布局
+    window.onload = function() {
+        adjustLayout();
+    };
+    
+    window.addEventListener('resize', function() {
+        adjustLayout();
+    });
+</script>
+</body>
+</html>

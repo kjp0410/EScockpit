@@ -1,0 +1,666 @@
+/* 确保html和body可以滚动 */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: auto; /* 允许滚动 */
+}
+
+/* 主容器样式 */
+.main-container {
+    min-height: 100vh; /* 至少占满视口高度 */
+    position: relative;
+    overflow-y: auto; /* 允许垂直滚动 */
+}
+
+/* 地图容器样式调整 */
+#map-container {
+    position: fixed; /* 固定定位，不随页面滚动 */
+    top: 64px; /* 顶部导航栏高度 */
+    left: 240px; /* 侧边栏宽度 */
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    touch-action: none; /* 禁止所有触摸操作 */
+    pointer-events: none; /* 禁止鼠标事件但允许某些特定元素接收事件 */
+}
+
+/* 地图标记和信息窗口允许交互 */
+#map-container .amap-marker,
+#map-container .amap-info-window {
+    pointer-events: auto; /* 恢复这些元素的鼠标事件 */
+}
+
+/* 信息卡片覆盖层调整 */
+.dashboard-overlay {
+    position: absolute; /* 绝对定位，随页面滚动 */
+    top: 64px; /* 顶部导航栏高度 */
+    left: 240px; /* 侧边栏宽度 */
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    pointer-events: none; /* 允许点击穿透到地图 */
+    overflow-y: auto; /* 允许垂直滚动 */
+    min-height: calc(100vh - 64px); /* 确保至少占满视口减去导航栏高度 */
+}
+
+/* 侧边栏调整 */
+aside {
+    position: fixed; /* 固定定位，不随页面滚动 */
+    top: 64px; /* 顶部导航栏高度 */
+    left: 0;
+    bottom: 0;
+    width: 240px;
+    overflow-y: auto; /* 允许垂直滚动 */
+    z-index: 15; /* 确保侧边栏在地图(z-index: 1)和覆盖层(z-index: 10)之上 */
+    background-color: white; /* 添加白色背景 */
+}
+
+/* 顶部导航栏调整 */
+header {
+    position: fixed; /* 固定定位，不随页面滚动 */
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    z-index: 20; /* 确保顶部导航栏在最前面 */
+    background-color: var(--card-bg);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    padding: 0 20px;
+}
+
+/* 移动端侧边栏 */
+.mobile-sidebar {
+    width: 100%; /* 移动端展开时占满宽度或设定的最大宽度 */
+    max-width: 300px;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.2); /* 添加阴影以示区分 */
+    z-index: 40; /* 确保移动端展开的侧边栏在最顶层 */
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    background-color: white; /* 确保移动端侧边栏有背景色 */
+}
+
+.mobile-sidebar.show {
+    transform: translateX(0);
+    z-index: 40; /* 再次确认展开时的 z-index */
+}
+
+/* 移动设备布局调整 */
+@media (max-width: 767px) {
+    #map-container {
+        left: 0; /* 在移动设备上隐藏侧边栏 */
+        width: 100%; /* 确保地图占满整个宽度 */
+        z-index: 1; /* 确保地图在移动端侧边栏下面 */
+    }
+    
+    .dashboard-overlay {
+        left: 0;
+        width: 100%; /* 确保覆盖层占满整个宽度 */
+        min-height: calc(100vh - 64px);
+        z-index: 10; /* 确保覆盖层在移动端侧边栏下面 */
+    }
+    
+    /* 侧边栏调整 (移动端特定) */
+    aside {
+        width: 80%; /* 或您期望的移动端宽度 */
+        max-width: 300px;
+        z-index: 40; /* 默认隐藏时也设置高 z-index */
+        transform: translateX(-100%); /* 默认隐藏 */
+        transition: transform 0.3s ease;
+        background-color: white; /* 确保有背景色 */
+        box-shadow: 2px 0 10px rgba(0,0,0,0.3); /* 增强阴影 */
+    }
+
+    aside.show {
+        transform: translateX(0); /* 显示 */
+    }
+    
+    /* 确保站点标记在地图上居中 */
+    .amap-info-window {
+        transform: translateX(-50%);
+        left: 50% !important;
+    }
+    
+    /* 不在这里设置侧边栏切换按钮的显示，改为在JavaScript中控制 */
+    
+    /* 调整左右卡片区域，使其在移动设备上可滚动 */
+    .left-cards, .right-cards {
+        width: 100%;
+        max-width: calc(100% - 32px);
+        overflow-y: auto;
+    }
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+.glass-card {
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    margin-bottom: 12px;
+}
+
+
+/* 信息卡片覆盖层 */
+.dashboard-content {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    pointer-events: none;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+/* 顶部信息卡片 */
+.top-info-card {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    pointer-events: auto;
+    padding: 10px;
+    max-height: 80px;
+}
+
+/* 左侧卡片区域 */
+.left-cards {
+    position: absolute;
+    top: 112px; /* 顶部卡片高度 + 间距 */
+    left: 16px;
+    width: 280px; /* 增加宽度从220px到280px */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: auto;
+    max-height: calc(100% - 128px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+    padding-right: 4px; /* 为滚动条留出空间 */
+}
+
+/* 右侧卡片区域 */
+.right-cards {
+    position: absolute;
+    top: 112px;
+    right: 16px;
+    width: 280px; /* 增加宽度从220px到280px */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: auto;
+    max-height: calc(100% - 128px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+    padding-right: 4px; /* 为滚动条留出空间 */
+}
+
+/* 自定义滚动条 */
+.left-cards::-webkit-scrollbar,
+.right-cards::-webkit-scrollbar {
+    width: 4px;
+}
+
+.left-cards::-webkit-scrollbar-track,
+.right-cards::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.left-cards::-webkit-scrollbar-thumb,
+.right-cards::-webkit-scrollbar-thumb {
+    background-color: rgba(203, 213, 225, 0.5);
+    border-radius: 20px;
+}
+
+/* 卡片标题 */
+.card-title {
+    font-size: 0.75rem; /* 12px */
+    font-weight: 600;
+    color: #1f2937; /* 更深的灰色 */
+    text-transform: uppercase; /* 大写字母 */
+    letter-spacing: 0.05em; /* 增加字母间距 */
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(229, 231, 235, 0.5); /* 添加底部边框 */
+    display: flex;
+    align-items: center;
+}
+
+/* 卡片标题图标 */
+.card-title i {
+    margin-right: 0.375rem;
+    color: #3b82f6; /* 蓝色图标 */
+    font-size: 0.875rem; /* 14px */
+}
+
+/* 响应式布局 */
+@media (max-width: 1366px) {
+    .left-cards,
+    .right-cards {
+        width: 240px; /* 在小屏幕上减小宽度，但仍比原来的大 */
+    }
+    
+    .chart-container {
+        height: 100px; /* 减小图表高度 */
+    }
+}
+
+/* 平板设备布局 */
+@media (max-width: 1024px) and (min-width: 768px) {
+    .left-cards,
+    .right-cards {
+        width: 220px; /* 在平板上进一步减小宽度 */
+    }
+    
+    .chart-container {
+        height: 90px; /* 进一步减小图表高度 */
+    }
+    
+    /* 调整地图容器 */
+    #map-container {
+        left: 0; /* 在平板上隐藏侧边栏 */
+    }
+    
+    /* 调整信息卡片覆盖层 */
+    .dashboard-overlay {
+        left: 0;
+    }
+    
+    /* 显示侧边栏切换按钮 */
+    .sidebar-toggle {
+        display: block;
+    }
+    
+    /* 侧边栏样式调整 */
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    
+    .sidebar.show {
+        transform: translateX(0);
+    }
+}
+
+/* 超小屏幕设备布局 */
+@media (max-width: 480px) {
+    /* 左侧卡片区域 */
+    .left-cards {
+        position: absolute;
+        top: 112px;
+        left: 16px;
+        width: calc(100% - 32px); /* 宽度为全屏减去左右间距 */
+        height: calc(50vh - 112px - 16px); /* 高度为视口高度的一半减去顶部卡片高度和间距 */
+        max-height: none;
+        overflow-y: auto;
+    }
+    
+    /* 右侧卡片区域 */
+    .right-cards {
+        position: absolute;
+        top: calc(50vh + 16px); /* 从视口高度的一半开始 */
+        left: 16px;
+        right: 16px;
+        width: calc(100% - 32px); /* 宽度为全屏减去左右间距 */
+        height: calc(50vh - 32px - 64px); /* 高度为视口高度的一半减去间距和顶部导航栏高度 */
+        max-height: none;
+        overflow-y: auto;
+    }
+    
+    /* 确保顶部信息卡片在小屏幕上不会占用太多空间 */
+    .top-info-card {
+        max-height: 70px; /* 减小高度 */
+        padding: 8px; /* 减小内边距 */
+    }
+    
+    /* 调整图表容器高度，适应小屏幕 */
+    .chart-container {
+        height: 100px; /* 减小图表高度 */
+    }
+}
+
+/* 侧边栏切换按钮 */
+.sidebar-toggle {
+    display: none; /* 默认隐藏 */
+    position: fixed;
+    top: 72px; /* 调整位置，避免与顶部导航重叠 */
+    left: 16px;
+    z-index: 50; /* 确保切换按钮在最前面 */
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    border: none; /* 移除可能存在的边框 */
+    color: #333; /* 设置图标颜色 */
+    font-size: 1.2rem; /* 调整图标大小 */
+}
+
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(241, 245, 249, 0.6);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.5);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.8);
+}
+
+/* Firefox滚动条样式 */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.5) rgba(241, 245, 249, 0.6);
+}
+
+/* 侧边栏滚动条 */
+.sidebar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+    overflow-y: auto;
+}
+
+/* 表格容器滚动条 */
+.table-container {
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+}
+
+/* 从 home-separated.html 移动的样式 */
+:root {
+    --sidebar-width: 240px;
+    --primary-color: #3498db;
+    --secondary-color: #2ecc71;
+    --bg-color: #f5f5f5;
+    --card-bg: #ffffff;
+    --text-color: #333333;
+    --sidebar-bg: #2c3e50;
+    --sidebar-text: #ecf0f1;
+    --header-height: 60px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    overflow-x: hidden;
+}
+
+
+.logo {
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: var(--primary-color);
+}
+
+.logo img {
+    height: 40px;
+    margin-right: 10px;
+}
+
+nav ul {
+    display: flex;
+    list-style: none;
+}
+
+nav ul li {
+    margin-left: 20px;
+}
+
+nav ul li a {
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+nav ul li a:hover {
+    color: var(--primary-color);
+}
+
+/* 移动设备下的侧边栏样式 */
+/* aside.mobile-sidebar { ... } */ /* 这个规则可以移除或合并 */
+
+/* 显示侧边栏 */
+/* aside.show { ... } */ /* 这个规则可以移除或合并 */
+
+/* 侧边栏切换按钮 */
+/* .sidebar-toggle { ... } */ /* 这个规则已在上方重新定义 */
+
+.sidebar-menu {
+    list-style: none;
+}
+
+.sidebar-menu li {
+    margin-bottom: 5px;
+}
+
+.sidebar-menu a {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    text-decoration: none;
+    color: var(--sidebar-text);
+    transition: background-color 0.3s;
+}
+
+.sidebar-menu a:hover, .sidebar-menu a.active {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-menu i {
+    margin-right: 10px;
+    width: 20px;
+    text-align: center;
+}
+
+
+.dashboard-overlay {
+    /* position, top, left, padding, z-index, transition, width 已在上方定义 */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+@media (max-width: 1024px) {
+    .dashboard-overlay {
+        width: calc(100% - 40px);
+    }
+    
+    nav ul li {
+        margin-left: 10px;
+    }
+    
+    .site-card {
+        width: calc(50% - 10px);
+    }
+}
+
+@media (max-width: 768px) {
+    .logo span {
+        display: none;
+    }
+    
+    nav ul li a {
+        font-size: 0.9rem;
+    }
+    
+    .site-card {
+        width: 100%;
+    }
+    
+    .dashboard-overlay {
+        flex-direction: column;
+    }
+}
+
+.site-card {
+    background-color: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 15px;
+    width: calc(33.33% - 10px);
+    min-width: 200px;
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.site-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+}
+
+.site-card h3 {
+    margin-bottom: 10px;
+    color: var(--primary-color);
+}
+
+.site-card .status {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    margin-bottom: 10px;
+}
+
+.status.online {
+    background-color: rgba(46, 204, 113, 0.2);
+    color: #27ae60;
+}
+
+.status.offline {
+    background-color: rgba(231, 76, 60, 0.2);
+    color: #c0392b;
+}
+
+.status.maintenance {
+    background-color: rgba(241, 196, 15, 0.2);
+    color: #f39c12;
+}
+
+.site-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.stat-item {
+    flex: 1;
+    min-width: 70px;
+}
+
+.stat-value {
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: #7f8c8d;
+    text-transform: uppercase;
+}
+
+/* 站点详情面板 */
+.site-details {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 100%;
+    background-color: white;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+    z-index: 20;
+    overflow: hidden;
+    transition: width 0.3s;
+    padding: 0;
+}
+
+.site-details.active {
+    width: 400px;
+    padding: 20px;
+}
+
+@media (max-width: 768px) {
+    .site-details.active {
+        width: 100%;
+    }
+}
+
+.close-details {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #7f8c8d;
+}
+
+.details-tabs {
+    display: flex;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.tab-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-item.active {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+
+/* 添加图表占位符样式 */
+.chart-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0,0,0,0.05);
+    border-radius: 4px;
+    color: #666;
+    font-size: 12px;
+}
+
+/* 修复ID元素显示状态 */
+#current-site-soc,
+#power-output,
+#temperature,
+#efficiency {
+    display: inline-block;
+    min-width: 40px;
+} 

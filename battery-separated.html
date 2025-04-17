@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电池包管理 - 分布式储能系统</title>
+    <!-- Use Local Tailwind CSS -->
+    <link rel="stylesheet" href="css/tailwind.min.css">
+    <!-- Use Local FontAwesome -->
+    <link rel="stylesheet" href="css/all.min.css">
+    <link rel="stylesheet" href="css/battery-styles.css">
+</head>
+<body class="bg-gray-50">
+    <div class="main-container">
+        <!-- 移动菜单按钮 -->
+        <button id="mobile-menu-toggle" class="mobile-menu-button md:hidden">
+            <i class="fas fa-bars text-gray-600"></i>
+        </button>
+        
+        <!-- 移动菜单遮罩层 -->
+        <div id="mobile-overlay" class="mobile-overlay"></div>
+        
+        <!-- 顶部导航栏 (from order-separated.html) -->
+        <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-20">
+            <div class="max-w-full mx-auto px-4">
+                <div class="flex items-center justify-between h-16">
+                    <!-- 左侧Logo和站点切换 -->
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 md:ml-0 ml-8">
+                            <img class="h-8 w-auto" src="images/logo2.png" alt="Logo"> 
+                        </div>
+                        <div class="ml-4 flex items-center md:ml-6">
+                            <div class="text-sm font-medium text-gray-700">分布式储能管理系统</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 中间导航菜单 -->
+                    <div class="hidden md:flex md:items-center md:justify-center md:flex-1">
+                        <nav class="flex flex-wrap justify-center space-x-1 sm:space-x-2 md:space-x-4 lg:space-x-10">
+                            <a href="home.html" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>驾驶舱</span>
+                            </a>
+                            <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>站点列表</span>
+                            </a>
+                            <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>告警中心</span>
+                            </a>
+                            <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>消息通知</span>
+                            </a>
+                        </nav>
+                    </div>
+                    
+                    <!-- 右侧图标区域 -->
+                    <div class="hidden md:flex items-center space-x-4 pr-2 sm:pr-4 md:pr-6 lg:pr-8">
+                        <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors">
+                            <i class="fas fa-cog text-lg"></i>
+                            <span class="sr-only">管理</span>
+                        </a>
+                        <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors">
+                            <i class="fas fa-user-circle text-lg"></i>
+                            <span class="sr-only">我的</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 左侧子导航菜单 (Adapted for Battery page) -->
+        <aside class="sidebar fixed left-0 top-16 bottom-0 w-60 bg-white shadow-sm z-10 overflow-y-auto sidebar-mobile md:transform-none" id="sidebar">
+            <nav class="py-4">
+                 <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <a href="home.html" class="flex items-center space-x-3 w-full">
+                        <i class="fas fa-home text-lg w-6"></i>
+                        <span>站点概况</span>
+                    </a>
+                </div>
+                
+                <div class="sidebar-parent">
+                    <!-- Battery Management - Active Parent -->
+                    <div class="sidebar-item active-parent px-4 py-3 flex items-center justify-between cursor-pointer" id="battery-management"> 
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-battery-three-quarters text-lg w-6"></i>
+                            <span>电池管理</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-sm transition-transform" id="battery-chevron"></i>
+                    </div>
+                    <!-- Submenu - Initially Open -->
+                    <div class="submenu open pl-10" id="battery-submenu"> 
+                        <div class="sidebar-item px-4 py-2 flex items-center space-x-3">
+                            <a href="#" class="flex items-center space-x-3 w-full">
+                                <i class="fas fa-bolt text-sm w-5"></i>
+                                <span class="text-sm">PCS</span>
+                             </a>
+                        </div>
+                        <!-- Battery Pack - Active Item -->
+                        <div class="sidebar-item active px-4 py-2 flex items-center space-x-3">
+                            <a href="battery-separated.html" class="flex items-center space-x-3 w-full">
+                                <i class="fas fa-cubes text-sm w-5"></i>
+                                <span class="text-sm">电池包</span>
+                             </a>
+                        </div>
+                    </div>
+                </div>
+                
+                 <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <a href="income-separated.html" class="flex items-center space-x-3 w-full">
+                        <i class="fas fa-chart-line text-lg w-6"></i>
+                        <span>收益报表</span>
+                    </a>
+                </div>
+                
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-calendar-alt text-lg w-6"></i>
+                    <span>业务调度日历</span>
+                </div>
+                
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-exclamation-triangle text-lg w-6"></i>
+                    <span>站点报警</span>
+                </div>
+                
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                     <a href="order-separated.html" class="flex items-center space-x-3 w-full">
+                        <i class="fas fa-clipboard-list text-lg w-6"></i>
+                        <span>工单管理</span>
+                     </a>
+                </div>
+                
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-desktop text-lg w-6"></i>
+                    <span>数据监控</span>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- 主内容区域 (Vue app mount point) -->
+        <main id="app" class="content-container ml-60 mt-16 p-6 dashboard-content dashboard-content-scrollable" :class="{'ml-60': !isMobile}">
+             <!-- 电池包详情选择器 (from battery.html) -->
+            <div class="glass-card p-4 mb-4"> <!-- Adjusted margin -->
+                <h2 class="card-title">电池包详情</h2>
+                <div class="flex items-center space-x-4 mt-2">
+                    <div class="w-1/2">
+                        <label class="block text-xs text-gray-500 mb-1">电池柜</label>
+                        <select v-model="selectedCabinet" @change="updatePackList" class="select-input">
+                            <option v-for="cabinet in cabinets" :key="cabinet.id" :value="cabinet.id">{{ cabinet.name }}</option>
+                        </select>
+                    </div>
+                    <div class="w-1/2">
+                        <label class="block text-xs text-gray-500 mb-1">电池包</label>
+                        <select v-model="selectedPack" @change="fetchBatteryData" class="select-input">
+                            <option v-for="pack in availablePacks" :key="pack.id" :value="pack.id">{{ pack.name }}</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 电池包状态概览 (from battery.html, adapted for Vue) -->
+            <div class="glass-card p-4 mb-4"> <!-- Adjusted margin -->
+                <div class="flex items-center justify-between">
+                    <h2 class="card-title">{{ selectedPackName }} 状态概览</h2>
+                    <div class="flex items-center">
+                        <span class="status-indicator" :class="statusInfo.indicatorClass"></span>
+                        <span class="text-xs" :class="statusInfo.textClass">{{ statusInfo.text }}</span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                    <!-- SOC Card -->
+                    <div class="status-card bg-blue-50">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs text-gray-500">SOC</div>
+                            <i class="fas fa-battery-half text-blue-500 text-sm"></i>
+                        </div>
+                        <div class="text-lg font-semibold mt-1">{{ formatPercent(statusOverview.soc) }}</div>
+                        <div class="progress-bar mt-2">
+                            <div class="progress-fill bg-blue-500" :style="{ width: formatPercent(statusOverview.soc) }"></div>
+                        </div>
+                    </div>
+                    <!-- SOH Card -->
+                     <div class="status-card bg-yellow-50">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs text-gray-500">SOH</div>
+                            <i class="fas fa-heartbeat text-yellow-500 text-sm"></i>
+                        </div>
+                        <div class="text-lg font-semibold mt-1">{{ formatPercent(statusOverview.soh) }}</div>
+                        <div class="progress-bar mt-2">
+                            <div class="progress-fill bg-yellow-500" :style="{ width: formatPercent(statusOverview.soh) }"></div>
+                        </div>
+                    </div>
+                     <!-- Temperature Card -->
+                     <div class="status-card bg-green-50">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs text-gray-500">温度</div>
+                            <i class="fas fa-temperature-half text-green-500 text-sm"></i>
+                        </div>
+                        <div class="text-lg font-semibold mt-1">{{ formatTemp(statusOverview.temperature) }}</div>
+                        <div class="flex items-center text-xs text-gray-500 mt-2 space-x-2">
+                            <span>最低: {{ formatTemp(statusOverview.minTemp) }}</span>
+                            <span>最高: {{ formatTemp(statusOverview.maxTemp) }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                     <!-- Voltage Card -->
+                     <div class="status-card bg-purple-50">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs text-gray-500">电压</div>
+                            <i class="fas fa-bolt text-purple-500 text-sm"></i>
+                        </div>
+                        <div class="text-lg font-semibold mt-1">{{ formatVolt(statusOverview.voltage) }}</div>
+                        <div class="flex items-center text-xs text-gray-500 mt-2 space-x-2">
+                            <span>单体最低: {{ formatVolt(statusOverview.minVolt) }}</span>
+                            <span>单体最高: {{ formatVolt(statusOverview.maxVolt) }}</span>
+                        </div>
+                    </div>
+                     <!-- Resistance Card -->
+                     <div class="status-card bg-indigo-50">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs text-gray-500">内阻</div>
+                            <i class="fas fa-plug text-indigo-500 text-sm"></i>
+                        </div>
+                        <div class="text-lg font-semibold mt-1">{{ formatResistance(statusOverview.resistance) }}</div>
+                        <div class="flex items-center text-xs text-gray-500 mt-2 space-x-2">
+                             <span>单体最低: {{ formatResistance(statusOverview.minResistance) }}</span>
+                            <span>单体最高: {{ formatResistance(statusOverview.maxResistance) }}</span>
+                        </div>
+                    </div>
+                    <!-- Cycle Count Card -->
+                    <div class="status-card bg-red-50">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs text-gray-500">循环次数</div>
+                            <i class="fas fa-sync text-red-500 text-sm"></i>
+                        </div>
+                        <div class="text-lg font-semibold mt-1">{{ statusOverview.cycleCount }}次</div>
+                        <div class="text-xs text-gray-500 mt-2">
+                            <span>预计剩余寿命: 约{{ statusOverview.remainingCycles }}次</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 电池单体状态可视化 (from battery.html, adapted for Vue) -->
+            <div class="glass-card p-4 mb-4"> <!-- Adjusted margin -->
+                <h2 class="card-title">电池单体状态可视化</h2>
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-xs text-gray-500">显示{{ batteryCells.length }}个单体电池电压分布</div>
+                     <div class="flex items-center space-x-4">
+                        <div class="flex items-center">
+                            <span class="cell-legend bg-green-500"></span>
+                            <span class="text-xs text-gray-500">正常</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="cell-legend bg-yellow-500"></span>
+                            <span class="text-xs text-gray-500">最低电压</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="cell-legend bg-red-500"></span>
+                            <span class="text-xs text-gray-500">最高电压</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 电池单体可视化网格 (Dynamic generation) -->
+                 <div class="grid grid-cols-16 gap-1 mt-2">
+                    <div v-for="(cell, index) in batteryCells" :key="index" class="battery-cell-container">
+                        <div class="battery-cell" :class="getCellClass(cell.status)"></div>
+                        <div class="text-xs text-center">{{ formatVolt(cell.voltage) }}</div>
+                    </div>
+                    <div v-if="!batteryCells || batteryCells.length === 0" class="col-span-16 text-center py-4 text-gray-500">
+                         暂无单体数据
+                     </div>
+                </div>
+            </div>
+            
+            <!-- 电池包历史数据图表 (from battery.html, adapted for Vue) -->
+            <div class="glass-card p-4 mb-4"> <!-- Adjusted margin -->
+                <h2 class="card-title">电池包历史数据</h2>
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-xs text-gray-500">显示最近{{ historyTimeRangeText }}数据变化</div>
+                     <div class="flex items-center space-x-2">
+                        <button @click="changeHistoryTimeRange('day')" :class="['history-button', historyTimeRange === 'day' ? 'active' : '']">24小时</button>
+                        <button @click="changeHistoryTimeRange('week')" :class="['history-button', historyTimeRange === 'week' ? 'active' : '']">7天</button>
+                        <button @click="changeHistoryTimeRange('month')" :class="['history-button', historyTimeRange === 'month' ? 'active' : '']">30天</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <div class="text-sm font-medium mb-2">SOC趋势</div>
+                        <div class="chart-container" style="height: 200px;">
+                            <canvas id="socSohChart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium mb-2">温度趋势</div>
+                        <div class="chart-container" style="height: 200px;">
+                            <canvas id="voltTempChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 电池包均衡记录 (from battery.html, adapted for Vue) -->
+            <div class="glass-card p-4"> <!-- Last card, standard margin -->
+                <div class="flex items-center justify-between">
+                    <h2 class="card-title">电池均衡记录</h2>
+                    <a href="#" class="text-xs text-blue-500 hover:text-blue-700 transition-colors">查看全部</a>
+                </div>
+                <div class="overflow-hidden rounded-lg mt-2">
+                    <table class="min-w-full history-table">
+                        <thead>
+                            <tr>
+                                <th>均衡时间</th>
+                                <th>均衡类型</th>
+                                <th>均衡单体</th>
+                                <th>均衡前电压差</th>
+                                <th>均衡后电压差</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(record, index) in balanceRecords" :key="index">
+                                <td>{{ record.time }}</td>
+                                <td>{{ record.type }}</td>
+                                <td>{{ record.cells }}</td>
+                                <td>{{ record.diffBefore }}mV</td>
+                                <td>{{ record.diffAfter }}mV</td>
+                                <td>
+                                    <span class="status-badge" :class="record.status === '已完成' ? 'status-completed' : 'status-inprogress'">
+                                         {{ record.status }}
+                                     </span>
+                                </td>
+                            </tr>
+                             <tr v-if="!balanceRecords || balanceRecords.length === 0">
+                                <td colspan="6" class="text-center py-4 text-gray-500">暂无均衡记录</td>
+                             </tr>
+                        </tbody>
+                    </table>
+                </div>
+                 <!-- Pagination placeholder -->
+                 <div class="flex justify-end items-center mt-4">
+                    <div class="flex space-x-1">
+                        <button class="pagination-button">上一页</button>
+                        <button class="pagination-button active">1</button>
+                         <button class="pagination-button">2</button>
+                         <button class="pagination-button">下一页</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Local JS -->
+    <script src="js/vue.min.js"></script>
+    <script src="js/vendor/chart.min.js"></script>
+    <script src="js/battery-script.js"></script> 
+    
+</body>
+</html> 

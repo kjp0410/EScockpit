@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>站点管理 - 分布式储能系统</title>
+    <!-- TailwindCSS -->
+    <link rel="stylesheet" href="css/tailwind.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="css/all.min.css">
+    <!-- 添加 Chart.js -->
+    <script src="js/vue.global.prod.js"></script>
+    <!-- 高德地图API (defer) -->
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=9e8264807bfc41a958e0d17aff56b146&plugin=AMap.ControlBar,AMap.ToolBar,AMap.Scale" defer></script>
+    <!-- 引入 Vue 3 (defer) - 确保此行存在 -->
+    <script src="js/vendor/chart.min.js"></script>
+    <!-- 自定义样式表 -->
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- 在 <head> 区域添加统一侧边栏栏目间隔的样式 -->
+    <style>
+    .sidebar-item { margin-bottom: 0 !important; }
+    .sidebar-item + .sidebar-item { margin-top: 0 !important; }
+    .sidebar-parent, .submenu { margin-bottom: 0 !important; }
+    </style>
+    <link rel="stylesheet" href="css/monitor-styles.css">
+</head>
+<body class="bg-gray-50">
+    <!-- Vue 应用根元素 -->
+    <div id="app" class="main-container" v-cloak>
+        <!-- 顶部导航栏 -->
+        <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-20">
+            <div class="max-w-full mx-auto px-4">
+                <div class="flex items-center justify-between h-16">
+                    <!-- Logo 区域 -->
+                    <div class="flex-shrink-0 flex items-center pl-2 sm:pl-4 md:pl-6 lg:pl-8">
+                        <img src="2.png" alt="Bitower" class="h-8 w-auto">
+                    </div>
+                    <!-- 导航菜单 - 桌面版 -->
+                    <div class="hidden md:flex md:items-center md:justify-center md:flex-1">
+                        <nav class="flex flex-wrap justify-center space-x-1 sm:space-x-2 md:space-x-4 lg:space-x-10">
+                            <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>驾驶舱</span>
+                            </a>
+                            <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>站点列表</span>
+                            </a>
+                            <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>告警中心</span>
+                            </a>
+                            <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>消息通知</span>
+                            </a>
+                        </nav>
+                    </div>
+                    <!-- 右侧图标区域 -->
+                    <div class="hidden md:flex items-center space-x-4 pr-2 sm:pr-4 md:pr-6 lg:pr-8">
+                        <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors">
+                            <i class="fas fa-cog text-lg"></i>
+                            <span class="sr-only">管理</span>
+                        </a>
+                        <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors">
+                            <i class="fas fa-user-circle text-lg"></i>
+                            <span class="sr-only">我的</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 左侧子导航菜单（桌面端） -->
+        <aside class="fixed left-0 top-16 bottom-0 w-60 bg-white shadow-sm z-10 overflow-y-auto">
+            <nav class="py-4">
+                <div class="sidebar-item active px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-home text-lg w-6"></i>
+                    <span>站点概况</span>
+                </div>
+                <div class="sidebar-parent">
+                    <div class="sidebar-item px-4 py-3 flex items-center justify-between cursor-pointer" @click="toggleSubmenu('battery')">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-battery-three-quarters text-lg w-6"></i>
+                            <span>电池管理</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-sm transition-transform" :class="{ 'rotate-180': submenuStates.battery }"></i>
+                    </div>
+                    <div class="submenu pl-7 space-y-1" :class="{ open: submenuStates.battery }">
+                        <a href="#" class="sidebar-item flex items-center px-3 py-2 text-sm rounded-md">
+                            <i class="fas fa-bolt w-5 text-center mr-2"></i>
+                            <span>PCS</span>
+                        </a>
+                        <a href="#" class="sidebar-item flex items-center px-3 py-2 text-sm rounded-md">
+                            <i class="fas fa-cubes w-5 text-center mr-2"></i>
+                            <span>电池包</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-chart-line text-lg w-6"></i>
+                    <span>收益报表</span>
+                </div>
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-calendar-alt text-lg w-6"></i>
+                    <span>业务调度日历</span>
+                </div>
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-exclamation-triangle text-lg w-6"></i>
+                    <span>站点报警</span>
+                </div>
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-clipboard-list text-lg w-6"></i>
+                    <span>工单管理</span>
+                </div>
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-desktop text-lg w-6"></i>
+                    <span>数据监控</span>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- 3D地图容器 -->
+        <div id="map-container" :class="['fixed', 'top-16', 'bottom-0', 'z-0', 'transition-all', 'duration-300', {'left-0': isMobile, 'left-60': !isMobile}]">
+            <!-- 添加加载中显示 -->
+            <div class="flex items-center justify-center h-full bg-gray-100">
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin text-blue-500 text-xl mb-2"></i>
+                    <p class="text-gray-600 text-sm">地图加载中...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 信息卡片覆盖层 -->
+        <div class="dashboard-overlay" :class="['transition-all', 'duration-300', {'left-0': isMobile, 'left-60': !isMobile}]">
+            <div class="dashboard-content">
+                <!-- 顶部信息卡片 -->
+                <div class="glass-card top-info-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h1 class="text-base font-semibold text-gray-800" >{{ currentSite.name }}</h1>
+                            <div class="flex items-center mt-1 text-xs text-gray-600">
+                                <i class="fas fa-map-marker-alt mr-1"></i>
+                                <span>{{ currentSite.address }}</span>
+                                <span class="mx-2">|</span>
+                                <span>装机容量: <span >{{ currentSite.capacity }}</span></span>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-xs text-gray-500 mr-2">站点ID: {{ currentSite.siteId }}</span>
+                            <!-- 可选按钮，暂时移除 -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 左侧卡片区域 -->
+                <div class="left-cards">
+                    <!-- 站点运行状态 -->
+                    <div class="glass-card p-3">
+                        <h2 class="card-title text-xs font-medium mb-2">
+                            <i class="fas fa-bolt"></i>运行状态
+                        </h2>
+                        <div class="flex items-center justify-between">
+                            <div class="text-center">
+                                <div class="text-sm font-semibold text-blue-500">{{ currentSite.soc }}%</div>
+                                <div class="text-xs text-gray-500">SOC</div>
+                            </div>
+                            <div class="text-center">
+                                <!-- 绑定状态文本和样式 -->
+                                <div class="text-sm font-semibold" :class="currentSite.status === 'discharging' ? 'text-green-500' : currentSite.status === 'charging' ? 'text-blue-500' : currentSite.status === 'fault' ? 'text-red-500' : 'text-gray-500'">{{ getStatusText(currentSite.status) }}</div>
+                                <div class="text-xs text-gray-500">当前模式</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-sm font-semibold text-gray-700">{{ realtimeData.powerOutput }}MW</div>
+                                <div class="text-xs text-gray-500">输出/输入功率</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 日充放电量 -->
+                    <div class="glass-card p-3">
+                        <h2 class="card-title text-xs font-medium mb-2">
+                            <i class="fas fa-exchange-alt"></i>今日充放电量
+                        </h2>
+                        <div class="flex items-center justify-between">
+                            <div class="text-center">
+                                <div class="text-sm font-semibold text-blue-500">45.6MWh</div>
+                                <div class="text-xs text-gray-500">充电量</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-sm font-semibold text-green-500">38.2MWh</div>
+                                <div class="text-xs text-gray-500">放电量</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-sm font-semibold text-gray-700" id="efficiency">83.8%</div>
+                                <div class="text-xs text-gray-500">效率</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 七天充放电曲线 -->
+                    <div class="glass-card p-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="card-title text-xs font-medium border-0 pb-0 mb-0">
+                                <i class="fas fa-chart-line"></i>近7天充放电曲线
+                            </h2>
+                            <a href="#" class="text-xs text-blue-500 hover:text-blue-600 transition-colors">
+                                详细数据 <i class="fas fa-chevron-right text-xs ml-1"></i>
+                            </a>
+                        </div>
+                        <div class="chart-container" style="height: 120px;">
+                            <canvas id="main"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- 站点健康状态 -->
+                    <!-- 此卡片已被删除 -->
+                    
+                    <!-- 告警卡片 -->
+                    <div class="glass-card p-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="card-title text-xs font-medium border-0 pb-0 mb-0">
+                                <i class="fas fa-exclamation-triangle"></i>最近告警
+                            </h2>
+                            <a href="#" class="text-xs text-blue-500 hover:text-blue-600 transition-colors">
+                                查看全部 <i class="fas fa-chevron-right text-xs ml-1"></i>
+                            </a>
+                        </div>
+                        <div class="table-container" style="max-height: 200px; overflow-y: auto;">
+                            <table class="min-w-full text-xs">
+                                <thead>
+                                    <tr>
+                                        <th class="px-2 py-1 text-left text-gray-500 font-medium">时间</th>
+                                        <th class="px-2 py-1 text-left text-gray-500 font-medium">级别</th>
+                                        <th class="px-2 py-1 text-left text-gray-500 font-medium">描述</th>
+                                        <th class="px-2 py-1 text-left text-gray-500 font-medium">设备</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="alarm-table-body">
+                                    <!-- JavaScript 将在这里填充内容 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 右侧卡片区域 -->
+                <div class="right-cards">
+                    <!-- 收益信息 -->
+                    <div class="glass-card p-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="card-title text-xs font-medium border-0 pb-0 mb-0">
+                                <i class="fas fa-coins"></i>收益信息
+                            </h2>
+                            <a href="#" class="text-xs text-blue-500 hover:text-blue-600 transition-colors">
+                                查看全部 <i class="fas fa-chevron-right text-xs ml-1"></i>
+                            </a>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="text-center">
+                                <div class="text-sm font-semibold text-blue-500">¥2,586</div>
+                                <div class="text-xs text-gray-500">今日收益</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-sm font-semibold text-blue-500">¥58,432</div>
+                                <div class="text-xs text-gray-500">本月累计</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-sm font-semibold text-blue-500">¥486,215</div>
+                                <div class="text-xs text-gray-500">年度累计</div>
+                            </div>
+                        </div>
+                        <div class="mt-2 pt-2 border-t border-gray-100">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="text-center">
+                                    <div class="text-xs font-medium text-gray-700">¥1,293</div>
+                                    <div class="text-xs text-gray-500">峰谷价差</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-xs font-medium text-gray-700">¥1,293</div>
+                                    <div class="text-xs text-gray-500">需求响应</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 七天收益曲线 -->
+                    <div class="glass-card p-3">
+                        <h2 class="card-title text-xs font-medium mb-2">
+                            <i class="fas fa-chart-area"></i>近7天收益曲线
+                        </h2>
+                        <div class="chart-container" style="height: 120px;">
+                            <canvas id="incomeMain"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- 电池状态卡片 -->
+                    <div class="glass-card p-3">
+                        <h2 class="card-title text-xs font-medium mb-2">
+                            <i class="fas fa-battery-three-quarters"></i>电池状态
+                        </h2>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="flex items-center">
+                                <div class="info-icon mr-2 text-xs">
+                                    <i class="fas fa-bolt"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-medium">最大压差</div>
+                                    <div class="text-sm font-semibold text-gray-700">0.003V</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="info-icon mr-2 text-xs">
+                                    <i class="fas fa-calendar-alt"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-medium">运行时间</div>
+                                    <div class="text-sm font-semibold text-gray-700">267天</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="info-icon mr-2 text-xs">
+                                    <i class="fas fa-temperature-low"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-medium">平均温度</div>
+                                    <div class="text-sm font-semibold text-gray-700">25.6°C</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="info-icon mr-2 text-xs">
+                                    <i class="fas fa-tachometer-alt"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-medium">运行状态</div>
+                                    <div class="text-sm font-semibold" :class="currentSite.status === 'discharging' ? 'text-green-500' : currentSite.status === 'charging' ? 'text-blue-500' : currentSite.status === 'fault' ? 'text-red-500' : 'text-gray-500'">{{ getStatusText(currentSite.status) }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 环境监测卡片 -->
+                    <div class="glass-card p-3">
+                        <h2 class="card-title text-xs font-medium mb-2">
+                            <i class="fas fa-temperature-high"></i>环境监测
+                        </h2>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="flex items-center">
+                                <div class="info-icon mr-2 text-xs">
+                                    <i class="fas fa-thermometer-half"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-medium">环境温度</div>
+                                    <div class="text-sm font-semibold text-gray-700">{{ realtimeData.temperature }}°C</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="info-icon mr-2 text-xs">
+                                    <i class="fas fa-tint"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-medium">环境湿度</div>
+                                    <div class="text-sm font-semibold text-gray-700">{{ realtimeData.humidity }}%</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="info-icon mr-2 text-xs">
+                                    <i class="fas fa-wind"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-medium">风扇状态</div>
+                                    <div class="text-sm font-semibold" :class="realtimeData.fanStatus === '正常' ? 'text-green-500' : 'text-red-500'">{{ realtimeData.fanStatus }}</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="info-icon mr-2 text-xs">
+                                    <i class="fas fa-door-closed"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-medium">门禁状态</div>
+                                    <div class="text-sm font-semibold" :class="realtimeData.doorStatus === '已锁定' ? 'text-green-500' : 'text-red-500'">{{ realtimeData.doorStatus }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 侧边栏切换按钮 -->
+        <div v-if="isMobile" id="sidebar-toggle-btn" class="sidebar-toggle" @click="toggleSidebar">
+            <i class="fas fa-bars"></i>
+        </div>
+        
+        <!-- 遮罩层，仅在移动端显示侧边栏时显示 -->
+        <div v-if="isMobile && sidebarOpen" class="fixed inset-0 bg-black bg-opacity-50 z-30" @click="toggleSidebar"></div>
+    </div>
+
+    <!-- Vue 应用脚本 -->
+    <script src="js/app.js" defer></script>
+</body>
+</html> 

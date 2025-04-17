@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>告警中心 - 分布式储能系统</title>
+    <!-- 
+        注意: cdn.tailwindcss.com 不应在生产环境中使用。
+        在生产环境中使用 Tailwind CSS，请将其安装为 PostCSS 插件或使用 Tailwind CLI。
+        详情参考: https://tailwindcss.com/docs/installation
+    -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* 确保html和body可以滚动 */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: auto; /* 允许滚动 */
+        }
+        
+        /* 主容器样式 */
+        .main-container {
+            min-height: 100vh; /* 至少占满视口高度 */
+            position: relative;
+            overflow-y: auto; /* 允许垂直滚动 */
+        }
+        
+        /* 内容区域调整 */
+        .content-container {
+            position: absolute;
+            top: 64px; /* 顶部导航栏高度 */
+            left: 240px; /* 侧边栏宽度 */
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: #f9fafb;
+        }
+        
+        /* 侧边栏调整 */
+        aside {
+            position: fixed; /* 固定定位，不随页面滚动 */
+            top: 64px; /* 顶部导航栏高度 */
+            left: 0;
+            bottom: 0;
+            width: 240px;
+            overflow-y: auto; /* 允许垂直滚动 */
+            z-index: 10;
+        }
+        
+        /* 顶部导航栏调整 */
+        header {
+            position: fixed; /* 固定定位，不随页面滚动 */
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            z-index: 20;
+        }
+        
+        /* 移动设备布局调整 */
+        @media (max-width: 767px) {
+            .content-container {
+                left: 0; /* 在移动设备上隐藏侧边栏 */
+            }
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .glass-card {
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 12px;
+        }
+        
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        
+        .sidebar-item:hover:not(.active) {
+            background-color: rgba(243, 244, 246, 0.8);
+        }
+        
+        .sidebar-item.active {
+            background-color: rgba(219, 234, 254, 0.8);
+            color: #3b82f6;
+            border-left: 3px solid #3b82f6;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 150px;
+            width: 100%;
+        }
+        
+        .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .submenu.open {
+            max-height: 200px;
+        }
+        
+        /* 卡片标题 */
+        .card-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+            display: flex;
+            align-items: center;
+        }
+        
+        /* 卡片标题图标 */
+        .card-title i {
+            margin-right: 0.375rem;
+            color: #3b82f6;
+            font-size: 0.875rem;
+        }
+        
+        /* 告警状态标签 */
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-align: center;
+            white-space: nowrap;
+        }
+        
+        .status-critical {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: rgb(239, 68, 68);
+        }
+        
+        .status-warning {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: rgb(245, 158, 11);
+        }
+        
+        .status-normal {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: rgb(16, 185, 129);
+        }
+        
+        /* 表格样式 */
+        .alarm-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .alarm-table th {
+            background-color: #f9fafb;
+            font-weight: 500;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .alarm-table td {
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .alarm-table tr:hover {
+            background-color: #f9fafb;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="main-container">
+        <!-- 顶部导航栏 -->
+        <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-20">
+            <div class="max-w-full mx-auto px-4">
+                <div class="flex items-center justify-between h-16">
+                    <!-- 左侧Logo和站点切换 -->
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <img class="h-8 w-auto" src="https://via.placeholder.com/120x32?text=Logo" alt="Logo">
+                        </div>
+                        <div class="ml-4 flex items-center md:ml-6">
+                            <div class="text-sm font-medium text-gray-700">分布式储能管理系统</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 中间导航菜单 -->
+                    <div class="hidden md:flex md:items-center md:justify-center md:flex-1">
+                        <nav class="flex flex-wrap justify-center space-x-1 sm:space-x-2 md:space-x-4 lg:space-x-10">
+                            <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>驾驶舱</span>
+                            </a>
+                            <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>站点列表</span>
+                            </a>
+                            <a href="#" class="nav-item active text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-blue-500 text-blue-500">
+                                <span>告警中心</span>
+                            </a>
+                            <a href="#" class="nav-item text-xs sm:text-sm font-medium py-1 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                <span>消息通知</span>
+                            </a>
+                        </nav>
+                    </div>
+                    
+                    <!-- 右侧图标区域 -->
+                    <div class="hidden md:flex items-center space-x-4 pr-2 sm:pr-4 md:pr-6 lg:pr-8">
+                        <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors">
+                            <i class="fas fa-cog text-lg"></i>
+                            <span class="sr-only">管理</span>
+                        </a>
+                        <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors">
+                            <i class="fas fa-user-circle text-lg"></i>
+                            <span class="sr-only">我的</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 左侧子导航菜单 -->
+        <aside class="fixed left-0 top-16 bottom-0 w-60 bg-white shadow-sm z-10 overflow-y-auto">
+            <nav class="py-4">
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-home text-lg w-6"></i>
+                    <span>站点概况</span>
+                </div>
+                
+                <div class="sidebar-parent">
+                    <div class="sidebar-item px-4 py-3 flex items-center justify-between cursor-pointer" id="battery-management">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-battery-three-quarters text-lg w-6"></i>
+                            <span>电池管理</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-sm transition-transform" id="battery-chevron"></i>
+                    </div>
+                    <div class="submenu pl-10" id="battery-submenu">
+                        <div class="sidebar-item px-4 py-2 flex items-center space-x-3">
+                            <i class="fas fa-bolt text-sm w-5"></i>
+                            <span class="text-sm">PCS</span>
+                        </div>
+                        <div class="sidebar-item px-4 py-2 flex items-center space-x-3">
+                            <i class="fas fa-cubes text-sm w-5"></i>
+                            <span class="text-sm">电池包</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-chart-line text-lg w-6"></i>
+                    <span>收益报表</span>
+                </div>
+                   
+                
+                <div class="sidebar-item active px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-exclamation-triangle text-lg w-6"></i>
+                    <span>站点报警</span>
+                </div>
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-desktop text-lg w-6"></i>
+                    <span>工单管理</span>
+                </div>
+                
+                <div class="sidebar-item px-4 py-3 flex items-center space-x-3">
+                    <i class="fas fa-desktop text-lg w-6"></i>
+                    <span>数据监控</span>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- 主内容区域 -->
+        <div class="content-container">
+            <!-- 告警概览 -->
+            <div class="mb-6">
+                <h1 class="text-xl font-semibold text-gray-800 mb-4">告警中心</h1>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <!-- 总告警数 -->
+                    <div class="bg-white rounded-lg shadow-sm p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">总告警数</p>
+                                <p class="text-2xl font-semibold mt-1">124</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                                <i class="fas fa-bell text-blue-500"></i>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-500">
+                            较上周 <span class="text-red-500">+12%</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 严重告警 -->
+                    <div class="bg-white rounded-lg shadow-sm p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">严重告警</p>
+                                <p class="text-2xl font-semibold mt-1 text-red-500">18</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                                <i class="fas fa-exclamation-circle text-red-500"></i>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-500">
+                            较上周 <span class="text-red-500">+5%</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 警告 -->
+                    <div class="bg-white rounded-lg shadow-sm p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">警告</p>
+                                <p class="text-2xl font-semibold mt-1 text-yellow-500">42</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center">
+                                <i class="fas fa-exclamation-triangle text-yellow-500"></i>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-500">
+                            较上周 <span class="text-green-500">-8%</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 已处理 -->
+                    <div class="bg-white rounded-lg shadow-sm p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">已处理</p>
+                                <p class="text-2xl font-semibold mt-1 text-green-500">64</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+                                <i class="fas fa-check-circle text-green-500"></i>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-500">
+                            较上周 <span class="text-green-500">+15%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 告警趋势图 -->
+                <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-base font-medium text-gray-800">告警趋势</h2>
+                        <div class="flex space-x-2">
+                            <button class="px-3 py-1 text-xs bg-blue-50 text-blue-500 rounded">日</button>
+                            <button class="px-3 py-1 text-xs bg-gray-100 text-gray-500 rounded">周</button>
+                            <button class="px-3 py-1 text-xs bg-gray-100 text-gray-500 rounded">月</button>
+                        </div>
+                    </div>
+                    <div class="h-64">
+                        <canvas id="alarmTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 告警列表 -->
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base font-medium text-gray-800">告警列表</h2>
+                    <div class="flex items-center space-x-2">
+                        <div class="relative">
+                            <input type="text" placeholder="搜索告警..." class="pl-8 pr-4 py-1 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500">
+                            <i class="fas fa-search text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                        </div>
+                        <select class="text-sm border rounded-md px-2 py-1">
+                            <option>全部站点</option>
+                            <option>北京朝阳储能电站</option>
+                            <option>上海浦东储能电站</option>
+                            <option>广州天河储能电站</option>
+                        </select>
+                        <select class="text-sm border rounded-md px-2 py-1">
+                            <option>全部级别</option>
+                            <option>严重</option>
+                            <option>警告</option>
+                            <option>一般</option>
+                        </select>
+                        <select class="text-sm border rounded-md px-2 py-1">
+                            <option>全部状态</option>
+                            <option>未处理</option>
+                            <option>处理中</option>
+                            <option>已处理</option>
+                        </select>
+                        <button class="px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                            <i class="fas fa-filter mr-1"></i>筛选
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="alarm-table">
+                        <thead>
+                            <tr>
+                                <th>告警ID</th>
+                                <th>告警级别</th>
+                                <th>告警内容</th>
+                                <th>站点</th>
+                                <th>设备</th>
+                                <th>发生时间</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>ALM-20230615-001</td>
+                                <td><span class="status-badge status-critical">严重</span></td>
+                                <td>电池温度过高</td>
+                                <td>北京朝阳储能电站</td>
+                                <td>电池包 #B-12</td>
+                                <td>2023-06-15 14:32:15</td>
+                                <td><span class="status-badge status-warning">处理中</span></td>
+                                <td>
+                                    <button class="text-blue-500 hover:text-blue-700 mr-2">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>ALM-20230615-002</td>
+                                <td><span class="status-badge status-warning">警告</span></td>
+                                <td>PCS通信异常</td>
+                                <td>上海浦东储能电站</td>
+                                <td>PCS #P-03</td>
+                                <td>2023-06-15 15:10:42</td>
+                                <td><span class="status-badge status-warning">处理中</span></td>
+                                <td>
+                                    <button class="text-blue-500 hover:text-blue-700 mr-2">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>ALM-20230615-003</td>
+                                <td><span class="status-badge status-critical">严重</span></td>
+                                <td>电池SOC过低</td>
+                                <td>广州天河储能电站</td>
+                                <td>电池包 #B-05</td>
+                                <td>2023-06-15 16:05:33</td>
+                                <td><span class="status-badge status-normal">已处理</span></td>
+                                <td>
+                                    <button class="text-blue-500 hover:text-blue-700 mr-2">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>ALM-20230615-004</td>
+                                <td><span class="status-badge status-warning">警告</span></td>
+                                <td>环境湿度过高</td>
+                                <td>北京朝阳储能电站</td>
+                                <td>环境监测 #E-01</td>
+                                <td>2023-06-15 16:45:18</td>
+                                <td><span class="status-badge status-normal">已处理</span></td>
+                                <td>
+                                    <button class="text-blue-500 hover:text-blue-700 mr-2">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>ALM-20230615-005</td>
+                                <td><span class="status-badge status-critical">严重</span></td>
+                                <td>电池单体电压异常</td>
+                                <td>上海浦东储能电站</td>
+                                <td>电池包 #B-08</td>
+                                <td>2023-06-15 17:12:05</td>
+                                <td><span class="status-badge status-info">未处理</span></td>
+                                <td>
+                                    <button class="text-blue-500 hover:text-blue-700 mr-2">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="text-orange-500 hover:text-orange-700" onclick="window.location.href='order.html#create-ticket'">
+                                        <i class="fas fa-ticket-alt"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>ALM-20230615-006</td>
+                                <td><span class="status-badge status-warning">警告</span></td>
+                                <td>充电功率波动</td>
+                                <td>广州天河储能电站</td>
+                                <td>PCS #P-02</td>
+                                <td>2023-06-15 18:30:22</td>
+                                <td><span class="status-badge status-warning">处理中</span></td>
+                                <td>
+                                    <button class="text-blue-500 hover:text-blue-700 mr-2">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>ALM-20230615-007</td>
+                                <td><span class="status-badge status-warning">警告</span></td>
+                                <td>电池均衡异常</td>
+                                <td>北京朝阳储能电站</td>
+                                <td>电池包 #B-03</td>
+                                <td>2023-06-15 19:05:47</td>
+                                <td><span class="status-badge status-normal">已处理</span></td>
+                                <td>
+                                    <button class="text-blue-500 hover:text-blue-700 mr-2">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>ALM-20230615-008</td>
+                                <td><span class="status-badge status-critical">严重</span></td>
+                                <td>系统过载</td>
+                                <td>上海浦东储能电站</td>
+                                <td>PCS #P-01</td>
+                                <td>2023-06-15 20:15:33</td>
+                                <td><span class="status-badge status-info">未处理</span></td>
+                                <td>
+                                    <button class="text-blue-500 hover:text-blue-700 mr-2">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="text-orange-500 hover:text-orange-700" onclick="window.location.href='order.html#create-ticket'">
+                                        <i class="fas fa-ticket-alt"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 分页 -->
+                <div class="flex items-center justify-between mt-4">
+                    <div class="text-sm text-gray-500">
+                        显示 1-8 条，共 124 条
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <button class="px-3 py-1 text-sm border rounded-md text-gray-500 hover:bg-gray-50">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button class="px-3 py-1 text-sm border rounded-md bg-blue-50 text-blue-500">1</button>
+                        <button class="px-3 py-1 text-sm border rounded-md text-gray-500 hover:bg-gray-50">2</button>
+                        <button class="px-3 py-1 text-sm border rounded-md text-gray-500 hover:bg-gray-50">3</button>
+                        <button class="px-3 py-1 text-sm border rounded-md text-gray-500 hover:bg-gray-50">4</button>
+                        <button class="px-3 py-1 text-sm border rounded-md text-gray-500 hover:bg-gray-50">5</button>
+                        <button class="px-3 py-1 text-sm border rounded-md text-gray-500 hover:bg-gray-50">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 告警详情弹窗 -->
+    <div id="alarm-detail-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="text-lg font-medium">告警详情</h3>
+                <button id="close-detail-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="p-4">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <div class="text-sm text-gray-500 mb-1">告警ID</div>
+                        <div id="detail-alarm-id" class="font-medium">ALM-20230615-001</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-500 mb-1">告警级别</div>
+                        <div id="detail-alarm-level" class="font-medium">
+                            <span class="status-badge status-critical">严重</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-500 mb-1">站点</div>
+                        <div id="detail-site" class="font-medium">北京朝阳储能电站</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-500 mb-1">设备</div>
+                        <div id="detail-device" class="font-medium">电池包 #B-12</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-500 mb-1">发生时间</div>
+                        <div id="detail-time" class="font-medium">2023-06-15 14:32:15</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-500 mb-1">状态</div>
+                        <div id="detail-status" class="font-medium">
+                            <span class="status-badge status-warning">处理中</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="text-sm text-gray-500 mb-1">告警内容</div>
+                    <div id="detail-content" class="font-medium">电池温度过高</div>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="text-sm text-gray-500 mb-1">告警描述</div>
+                    <div id="detail-description" class="text-sm bg-gray-50 p-3 rounded">
+                        电池包 #B-12 温度传感器检测到温度达到 58°C，超过安全阈值 55°C。系统已自动启动降温措施，但温度仍未降至安全范围内。请立即检查电池包冷却系统是否正常工作，并检查电池包是否存在过充或短路情况。
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="text-sm text-gray-500 mb-1">处理记录</div>
+                    <div id="detail-records" class="text-sm">
+                        <div class="bg-gray-50 p-3 rounded mb-2">
+                            <div class="flex justify-between mb-1">
+                                <span class="font-medium">张工程师</span>
+                                <span class="text-gray-500">2023-06-15 15:10:22</span>
+                            </div>
+                            <p>已远程检查冷却系统，发现水泵工作异常，已重启水泵，温度开始下降。</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="handle-form" class="mb-4">
+                    <div class="text-sm text-gray-500 mb-1">处理意见</div>
+                    <textarea class="w-full border rounded-md p-2 text-sm" rows="3" placeholder="请输入处理意见..."></textarea>
+                </div>
+            </div>
+            
+            <div class="p-4 border-t flex justify-end space-x-2">
+                <button id="close-detail-btn" class="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200">关闭</button>
+                <button id="handle-alarm-btn" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">确认处理</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 处理确认弹窗 -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div class="p-4 border-b">
+                <h3 class="text-lg font-medium">确认处理</h3>
+            </div>
+            
+            <div class="p-4">
+                <p class="mb-4">确认将告警 <span id="confirm-alarm-id" class="font-medium">ALM-20230615-001</span> 标记为已处理？</p>
+                
+                <div class="mb-4">
+                    <div class="text-sm text-gray-500 mb-1">处理结果</div>
+                    <select class="w-full border rounded-md p-2 text-sm">
+                        <option>已解决</option>
+                        <option>暂时解决</option>
+                        <option>需要后续跟进</option>
+                        <option>误报</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="text-sm text-gray-500 mb-1">处理说明</div>
+                    <textarea class="w-full border rounded-md p-2 text-sm" rows="3" placeholder="请输入处理说明..."></textarea>
+                </div>
+            </div>
+            
+            <div class="p-4 border-t flex justify-end space-x-2">
+                <button id="cancel-confirm-btn" class="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200">取消</button>
+                <button id="submit-confirm-btn" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 侧边栏子菜单展开/折叠
+        document.addEventListener('DOMContentLoaded', function() {
+            // 确保元素存在后再添加事件监听器
+            const batteryManagement = document.getElementById('battery-management');
+            if (batteryManagement) {
+                batteryManagement.addEventListener('click', function() {
+                    const submenu = document.getElementById('battery-submenu');
+                    const chevron = document.getElementById('battery-chevron');
+                    
+                    if (submenu && chevron) {
+                        submenu.classList.toggle('open');
+                        chevron.classList.toggle('rotate-180');
+                    }
+                });
+            }
+            
+            // 告警趋势图表 - 确保元素存在
+            const alarmTrendCtx = document.getElementById('alarmTrendChart');
+            if (alarmTrendCtx) {
+                const ctx = alarmTrendCtx.getContext('2d');
+                const alarmTrendChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['6月10日', '6月11日', '6月12日', '6月13日', '6月14日', '6月15日', '6月16日'],
+                        datasets: [{
+                            label: '严重告警',
+                            data: [3, 2, 4, 1, 2, 3, 2],
+                            borderColor: 'rgba(239, 68, 68, 0.8)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            fill: true,
+                            pointRadius: 2
+                        }, {
+                            label: '警告告警',
+                            data: [5, 7, 4, 6, 8, 5, 7],
+                            borderColor: 'rgba(245, 158, 11, 0.8)',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            fill: true,
+                            pointRadius: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    boxWidth: 12,
+                                    padding: 10,
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    font: {
+                                        size: 10
+                                    },
+                                    color: '#9ca3af'
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(243, 244, 246, 0.5)'
+                                },
+                                ticks: {
+                                    stepSize: 2,
+                                    font: {
+                                        size: 10
+                                    },
+                                    color: '#9ca3af'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // 告警分布图表 - 确保元素存在
+            const alarmDistributionCtx = document.getElementById('alarmDistributionChart');
+            if (alarmDistributionCtx) {
+                const ctx = alarmDistributionCtx.getContext('2d');
+                const alarmDistributionChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['电池系统', 'PCS系统', '环境监测', '通信系统', '其他'],
+                        datasets: [{
+                            data: [35, 25, 15, 18, 7],
+                            backgroundColor: [
+                                'rgba(59, 130, 246, 0.7)',
+                                'rgba(16, 185, 129, 0.7)',
+                                'rgba(245, 158, 11, 0.7)',
+                                'rgba(139, 92, 246, 0.7)',
+                                'rgba(107, 114, 128, 0.7)'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    boxWidth: 12,
+                                    padding: 10,
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '70%'
+                    }
+                });
+            }
+            
+            // 切换侧边栏按钮
+            const toggleSidebar = document.getElementById('toggle-sidebar');
+            if (toggleSidebar) {
+                toggleSidebar.addEventListener('click', function() {
+                    const sidebar = document.getElementById('sidebar');
+                    if (sidebar) {
+                        sidebar.classList.toggle('hidden');
+                    }
+                });
+            }
+            
+            // 为表格中的按钮添加点击事件
+            const eyeButtons = document.querySelectorAll('.alarm-table .fa-eye');
+            if (eyeButtons.length > 0) {
+                eyeButtons.forEach(function(btn) {
+                    btn.parentElement.addEventListener('click', function() {
+                        const row = this.closest('tr');
+                        const alarmId = row.cells[0].textContent;
+                        showAlarmDetail(alarmId);
+                    });
+                });
+            }
+            
+            // 处理确认按钮
+            const checkButtons = document.querySelectorAll('.alarm-table .fa-check');
+            if (checkButtons.length > 0) {
+                checkButtons.forEach(function(btn) {
+                    btn.parentElement.addEventListener('click', function() {
+                        const row = this.closest('tr');
+                        const alarmId = row.cells[0].textContent;
+                        showAlarmDetail(alarmId); // 改为弹出详情弹窗
+                    });
+                });
+            }
+            
+            // 关闭详情弹窗
+            const closeDetailModal = document.getElementById('close-detail-modal');
+            if (closeDetailModal) {
+                closeDetailModal.addEventListener('click', function() {
+                    const modal = document.getElementById('alarm-detail-modal');
+                    if (modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            }
+            
+            const closeDetailBtn = document.getElementById('close-detail-btn');
+            if (closeDetailBtn) {
+                closeDetailBtn.addEventListener('click', function() {
+                    const modal = document.getElementById('alarm-detail-modal');
+                    if (modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            }
+            
+            // 处理按钮点击事件
+            const handleAlarmBtn = document.getElementById('handle-alarm-btn');
+            if (handleAlarmBtn) {
+                handleAlarmBtn.addEventListener('click', function() {
+                    const alarmId = document.getElementById('detail-alarm-id').textContent;
+                    const detailModal = document.getElementById('alarm-detail-modal');
+                    if (detailModal) {
+                        detailModal.classList.add('hidden');
+                    }
+                    confirmAlarm(alarmId);
+                });
+            }
+            
+            // 关闭确认弹窗
+            const cancelConfirmBtn = document.getElementById('cancel-confirm-btn');
+            if (cancelConfirmBtn) {
+                cancelConfirmBtn.addEventListener('click', function() {
+                    const modal = document.getElementById('confirm-modal');
+                    if (modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            }
+            
+            // 提交确认
+            const submitConfirmBtn = document.getElementById('submit-confirm-btn');
+            if (submitConfirmBtn) {
+                submitConfirmBtn.addEventListener('click', function() {
+                    // 这里可以添加提交处理结果的逻辑
+                    alert('告警处理成功！');
+                    const modal = document.getElementById('confirm-modal');
+                    if (modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            }
+            
+            // 点击弹窗外部关闭弹窗
+            const alarmDetailModal = document.getElementById('alarm-detail-modal');
+            if (alarmDetailModal) {
+                alarmDetailModal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.classList.add('hidden');
+                    }
+                });
+            }
+            
+            const confirmModal = document.getElementById('confirm-modal');
+            if (confirmModal) {
+                confirmModal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.classList.add('hidden');
+                    }
+                });
+            }
+        });
+        
+        // 响应式布局调整
+        function adjustLayout() {
+            const width = window.innerWidth;
+            const contentContainer = document.querySelector('.content-container');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (contentContainer && sidebar) {
+                if (width < 768) {
+                    contentContainer.style.left = '0';
+                    sidebar.classList.add('hidden');
+                } else {
+                    contentContainer.style.left = '240px';
+                    sidebar.classList.remove('hidden');
+                }
+            }
+        }
+        
+        // 告警详情弹窗
+        function showAlarmDetail(alarmId) {
+            // 这里可以根据alarmId从后端获取详细信息
+            // 为演示目的，这里使用静态数据
+            const detailAlarmId = document.getElementById('detail-alarm-id');
+            const alarmDetailModal = document.getElementById('alarm-detail-modal');
+            
+            if (detailAlarmId && alarmDetailModal) {
+                detailAlarmId.textContent = alarmId;
+                alarmDetailModal.classList.remove('hidden');
+            }
+        }
+        
+        // 告警处理确认弹窗
+        function confirmAlarm(alarmId) {
+            const confirmAlarmId = document.getElementById('confirm-alarm-id');
+            const confirmModal = document.getElementById('confirm-modal');
+            
+            if (confirmAlarmId && confirmModal) {
+                confirmAlarmId.textContent = alarmId;
+                confirmModal.classList.remove('hidden');
+            }
+        }
+        
+        // 页面加载和窗口大小变化时调整布局
+        window.addEventListener('load', adjustLayout);
+        window.addEventListener('resize', adjustLayout);
+    </script>
+</body>
+</html> 
